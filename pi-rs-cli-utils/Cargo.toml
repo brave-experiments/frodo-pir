@@ -1,0 +1,7 @@
+[package]
+name = "pi-rs-cli-utils"
+version = "0.0.1"
+edition = "2018"
+
+[dependencies]
+clap = "2.34.0"

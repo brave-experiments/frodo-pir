@@ -1,0 +1,7 @@
+# frodopir
+target/
+Cargo.lock
+*.json
+
+# misc
+.DS_Store

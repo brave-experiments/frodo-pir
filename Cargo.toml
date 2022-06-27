@@ -1,0 +1,31 @@
+[package]
+name = "frodo-pir"
+version = "0.0.1"
+authors = ["Alex Davidson <coela@alxdavids.xyz>", "gpestana <g6pestana@gmail.com>", "Sofía Celi <cherenkov@riseup.net>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bitreader = "0.3.3"
+hex-literal = "0.3.1"
+libmath = "0.2.1"
+poly1305 = "0.6.2"
+rand = { version="0.8.3", features = ["small_rng"] }
+rand_core = "0.6.3"
+seahash = "4.1.0"
+criterion = "0.3.1"
+rayon = "1.5.0"
+lazy_static = "1.4.0"
+base64 = "0.13"
+serde = {version="1.0", features=["derive"]}
+serde_json = "1.0.59"
+clap = "2.34.0"
+bincode = "1.3.3"
+
+[dev-dependencies]
+pi-rs-cli-utils = {path = "./pi-rs-cli-utils"}
+
+[[bench]]
+name = "bench"
+harness = false
