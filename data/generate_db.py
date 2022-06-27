@@ -12,7 +12,7 @@ def get_all_ones(length):
 
 if __name__ == "__main__":
   all_ones = os.getenv("DB_ALL_ONES")
-  number_of_entries_exp = os.getenv("DB_NUM_ENTRIES_EXP") or 15
+  number_of_entries_exp = os.getenv("DB_NUM_ENTRIES_EXP") or 16
   element_size = os.getenv("DB_ELEMENT_SIZE_EXP") or 13
   v = int(number_of_entries_exp)
   num_entries = pow(2, v)

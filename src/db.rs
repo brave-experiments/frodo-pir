@@ -92,14 +92,17 @@ impl Database {
     Database::get_matrix_width(self.get_ele_size(), self.get_plaintext_bits())
   }
 
+  /// Get the matrix size
   pub fn get_matrix_height(&self) -> usize {
     self.m
   }
 
+  /// Get the element size
   pub fn get_ele_size(&self) -> usize {
     self.ele_size
   }
 
+  /// Get the plaintext bits
   pub fn get_plaintext_bits(&self) -> usize {
     self.plaintext_bits
   }
@@ -215,7 +218,6 @@ impl CommonParams {
       .collect()
   }
 }
-
 impl From<&BaseParams> for CommonParams {
   fn from(params: &BaseParams) -> Self {
     Self(get_lwe_matrix_from_seed(

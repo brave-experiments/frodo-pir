@@ -5,7 +5,7 @@
 pub mod lwe {
   const MODULUS: u64 = u32::MAX as u64 + 1;
 
-  /// This value indicates the indicator value which is used to reveal
+  /// Returns a value indicating the indicator value which is used to reveal
   /// the DB row that is queried.
   pub fn get_rounding_factor(plaintext_bits: usize) -> u32 {
     (MODULUS / get_plaintext_size(plaintext_bits) as u64) as u32

@@ -1,3 +1,4 @@
+/// The `api` module is the public entry point for all FrodoPIR database.
 use crate::db::Database;
 pub use crate::db::{BaseParams, CommonParams};
 use crate::errors::{ErrorQueryParamsReused, ResultBoxedError};
@@ -8,28 +9,33 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::str;
 
+/// A `Shard` is an instance of a database, where each row corresponds
+/// to a single element, that has been preprocessed by the server.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Shard {
   db: Database,
   base_params: BaseParams,
 }
 impl Shard {
-  // Expects a JSON array of base64-encoded strings
+  /// Expects a JSON file of base64-encoded strings in file path. It also
+  /// expects the lwe dimension, m (the number of DB elements), element size
+  /// (in bytes) of the database elements, and plaintext bits.
+  /// It will call the 'from_base64_strings' function to generate the database.
   pub fn from_json_file(
     file_path: &str,
     lwe_dim: usize,
     m: usize,
     ele_size: usize,
     plaintext_bits: usize,
-  ) -> ResultBoxedError<Self> {
-    let file_contents: String = fs::read_to_string(file_path)?.parse()?;
-    let elements: Vec<String> = serde_json::from_str(&file_contents)?;
-
+  ) -> Self {
+    let file_contents: String =
+      fs::read_to_string(file_path).unwrap().parse().unwrap();
+    let elements: Vec<String> = serde_json::from_str(&file_contents).unwrap();
     Shard::from_base64_strings(&elements, lwe_dim, m, ele_size, plaintext_bits)
   }
 
-  // Expects an array of base64-encoded strings and converts into a
-  // database that can process client queries
+  /// Expects an array of base64-encoded strings and converts into a
+  /// database that can process client queries
   pub fn from_base64_strings(
     base64_strs: &[String],
     lwe_dim: usize,
@@ -67,15 +73,17 @@ impl Shard {
     Ok(se?)
   }
 
+  /// Returns the database
   pub fn get_db(&self) -> &Database {
     &self.db
   }
 
+  /// Returns the base parameters
   pub fn get_base_params(&self) -> &BaseParams {
-    // derive LHS if not done before
     &self.base_params
   }
 
+  // TODO: alex: do we need this?
   pub fn into_row_iter(&self) -> std::vec::IntoIter<std::string::String> {
     (0..self.get_db().get_matrix_height())
       .into_iter()
@@ -162,7 +170,7 @@ impl Response {
       .collect()
   }
 
-  /// Parses the output as a base64-encoded string
+  /// Parses the output as bytes
   pub fn parse_output_as_bytes(&self, qp: &QueryParams) -> Vec<u8> {
     let row = self.parse_output_as_row(qp);
     bytes_from_u32_slice(&row, qp.plaintext_bits, qp.ele_size)
@@ -185,10 +193,10 @@ mod tests {
     let m = 2u32.pow(12) as usize;
     let ele_size = 2u32.pow(8) as usize;
     let plaintext_bits = 12usize;
-    let dim = 512;
+    let lwe_dim = 512;
     let db_eles = generate_db_eles(m, (ele_size + 7) / 8);
     let shard =
-      Shard::from_base64_strings(&db_eles, dim, m, ele_size, plaintext_bits)
+      Shard::from_base64_strings(&db_eles, lwe_dim, m, ele_size, plaintext_bits)
         .unwrap();
     let bp = shard.get_base_params();
     let cp = CommonParams::from(bp);
@@ -208,10 +216,10 @@ mod tests {
     let m = 2u32.pow(6) as usize;
     let ele_size = 2u32.pow(8) as usize;
     let plaintext_bits = 10usize;
-    let dim = 512;
+    let lwe_dim = 512;
     let db_eles = generate_db_eles(m, (ele_size + 7) / 8);
     let shard =
-      Shard::from_base64_strings(&db_eles, dim, m, ele_size, plaintext_bits)
+      Shard::from_base64_strings(&db_eles, lwe_dim, m, ele_size, plaintext_bits)
         .unwrap();
     let bp = shard.get_base_params();
     let cp = CommonParams::from(bp);

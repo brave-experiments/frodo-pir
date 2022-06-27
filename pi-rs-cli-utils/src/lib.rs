@@ -6,7 +6,6 @@ pub struct CLIFlags {
   pub lwe_dim: usize,
   pub plaintext_bits: usize,
   pub ele_size: usize,
-  pub num_shards: usize,
 }
 
 pub fn parse_cli_flags() -> CLIFlags {
@@ -35,7 +34,7 @@ pub fn parse_cli_flags() -> CLIFlags {
         .short("p")
         .long("plaintext_bits")
         .takes_value(true)
-        .default_value("11")
+        .default_value("10")
         .help("Number of plaintext bits encoded in each entry of DB matrix"),
     )
     .arg(
@@ -45,14 +44,6 @@ pub fn parse_cli_flags() -> CLIFlags {
         .takes_value(true)
         .default_value("2048")
         .help("LWE dimension"),
-    )
-    .arg(
-      Arg::with_name("num_shards")
-        .short("s")
-        .long("num_shards")
-        .takes_value(true)
-        .default_value("16")
-        .help("Number of database shards to set up"),
     )
     .get_matches();
 
@@ -68,15 +59,11 @@ pub fn parse_cli_flags() -> CLIFlags {
   let m = parse_exp_to_usize(String::from(
     matches.value_of("matrix_height").unwrap(),
   ));
-  let num_shards: usize = String::from(matches.value_of("num_shards").unwrap())
-    .parse()
-    .unwrap();
   CLIFlags {
     m,
     lwe_dim,
     plaintext_bits,
     ele_size,
-    num_shards,
   }
 }
 
@@ -86,13 +73,11 @@ pub fn parse_from_env() -> CLIFlags {
   let plaintext_bits: usize =
     env::var("PIR_PLAINTEXT_BITS").unwrap().parse().unwrap();
   let m = parse_exp_to_usize(env::var("PIR_MATRIX_HEIGHT_EXP").unwrap());
-  let num_shards: usize = env::var("PIR_NUM_SHARDS").unwrap().parse().unwrap();
   CLIFlags {
     m,
     lwe_dim,
     plaintext_bits,
     ele_size,
-    num_shards,
   }
 }
 

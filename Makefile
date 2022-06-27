@@ -5,13 +5,14 @@ PARAMS_OUTPUT_PATH=data/params.json
 PREVIOUS_DIR=..
 
 # cargo build values
+# these are the FrodoPIR parameters to be used for benchmarking
 MATRIX_HEIGHT_EXP=16
 LWE_DIMENSION=1572
 ELEMENT_SIZE_EXP=13
 PLAINTEXT_SIZE_EXP=10
 NUM_SHARDS=8
 
-# rust flags 
+# rust flags
 RUST_BACKTRACE=1
 
 # python db generation values
@@ -37,11 +38,13 @@ PYTHON_COMMAND=${DB_GEN_PRELIM} python3
 gen-db:
 	${PYTHON_COMMAND} data/generate_db.py
 
-.PHONY: build test bench bench-all
+.PHONY: build test docs bench bench-all
 build:
 	${CARGO_COMMAND} build
 test:
 	${CARGO_COMMAND} test
+docs:
+	${CARGO} doc --open --no-deps
 bench:
 	${PRELIM} ${PIR_ENV} ${CARGO} bench
 bench-all:
