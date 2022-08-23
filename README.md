@@ -58,6 +58,30 @@ The `src` folder contains the main *FrodoPIR* functionality. In particular:
 
 ### How to use
 
+An easy way to see how to use the library can be found on the tests on the `api.rs` file:
+
+```
+    fn client_query_e2e() {
+        let lwe_dim = 512;
+        let m = 2u32.pow(12) as usize;
+        let ele_size = 2u32.pow(8) as usize;
+        let plaintext_bits = 12usize;
+        let db_eles = generate_db_eles(m, (ele_size + 7) / 8);
+        let shard = Shard::from_base64_strings(&db_eles, lwe_dim, m, ele_size, plaintext_bits);
+        let base_params = shard.get_base_params();
+        let common_params = CommonParams::from(base_params);
+        #[allow(clippy::needless_range_loop)]
+        for i in 0..10 {
+            let mut query_params = QueryParams::new(&common_params, base_params);
+            let query = query_params.prepare_query(i);
+            let d_resp = shard.respond(&query).unwrap();
+            let resp: Response = bincode::deserialize(&d_resp).unwrap();
+            let output = resp.parse_output_as_base64(&query_params);
+            assert_eq!(output, db_eles[i]);
+        }
+    }
+```
+
 ## Citation
 
 ```
