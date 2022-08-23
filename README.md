@@ -12,6 +12,17 @@ Rust implementation, illustrating that FrodoPIR is eminently suitable for large 
 
 *Warning*: This code is a research prototype. Do not use it in production.
 
+## Requirements
+
+In order to build, run, test and benchmark the library, you will need:
+
+```
+  Rust >= 1.61.0
+  Cargo
+  Make
+  Python3
+```
+
 ## Quickstart
 
 To build the library, run:
@@ -31,6 +42,21 @@ To run the benchmarks (note that this process is very slow):
 ```
   make bench-all
 ```
+
+## Overview
+
+### FrodoPIR main functionality
+
+The `src` folder contains the main *FrodoPIR* functionality. In particular:
+  * `api.rs`: provides the main *FrodoPIR* API:
+    * To read and generate the appropriate parameters: `from_json_file` (from a file) or `from_base64_strings` (from strings).
+      (This corresponds to the 'Server setup' and 'Server preprocessing' phases from the paper).
+    * To prepare and create the client query: `prepare_query` (this corresponds to the 'Client query generation' phase from the paper).
+    * To analyse the client query and create the server response: `respond` (this corresponds to the 'Server response' phase from the paper).
+  * The `db.rs` file contains the main functionality to be used for database processing.
+  * The `util.rs` file contains utility functions.
+
+### How to use
 
 ## Citation
 
