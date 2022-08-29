@@ -5,13 +5,14 @@ PARAMS_OUTPUT_PATH=data/params.json
 PREVIOUS_DIR=..
 
 # cargo build values
+# these are the FrodoPIR parameters to be used for benching
 MATRIX_HEIGHT_EXP=16
 LWE_DIMENSION=1572
 ELEMENT_SIZE_EXP=13
 PLAINTEXT_SIZE_EXP=10
 NUM_SHARDS=8
 
-# rust flags 
+# rust flags
 RUST_BACKTRACE=1
 
 # python db generation values
