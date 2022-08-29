@@ -96,5 +96,7 @@ An easy way to see how to use the library can be found on the tests on the `api.
 ```
 
 (WIP: adding documentation for local env)
-<img width="827" alt="frodo-pir-local" src="https://user-images.githubusercontent.com/1398860/187131596-6db8a3fe-ac8e-4bf7-9a3c-afe7b2c0836d.png">
+
+![frodo-pir-local](https://user-images.githubusercontent.com/1398860/187131871-2eabfed2-8757-462d-b6b5-008b7238ecb5.png)
+
 Figure 1. Schema of the local environment with user making query against bucket 2.
