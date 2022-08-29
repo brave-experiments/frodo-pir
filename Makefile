@@ -19,9 +19,10 @@ DB_ALL_ONES=0
 DB_NUM_ENTRIES_EXP=${MATRIX_HEIGHT_EXP}
 
 # local environment values
-LOCAL_TEST_DATA=./data
-LOCAL_BUCKETS_PATH=./${LOCAL_TEST_DATA}/local_buckets
-LOCAL_CONFIGS=./${LOCAL_TEST_DATA}/local-configs.yml
+LOCAL_TEST_DATA=data/local-env
+LOCAL_BUCKETS_PATH=${LOCAL_TEST_DATA}/local_buckets
+LOCAL_CONFIGS=${LOCAL_TEST_DATA}/local-configs.yml
+START_CONTAINERS_SCRIPT_PATH=${LOCAL_TEST_DATA}/start-server-containers.sh
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 RUST_FLAGS=RUST_BACKTRACE=${RUST_BACKTRACE}
@@ -58,25 +59,31 @@ bench-all:
 	${PRELIM} ${PIR_ENV_ALL} PIR_MATRIX_HEIGHT_EXP=20 PIR_PLAINTEXT_BITS=9 ${CARGO} bench > benchmarks-20.txt
 
 # local environment make steps
-.PHONY: prepare run-server query build-docker install-tolling
+.PHONY: prepare prepare-buckets prepare-server-commands run-server query build-docker
 prepare:
-	make install-tooling
 	make build-docker
+	make prepare-buckets
 
 run-server:
-	LOCAL_CONFIGS=${LOCAL_CONFIGS} prepare-buckets
-	LOCAL_CONFIGS=${LOCAL_CONFIGS} PWD=${ROOT_DIR} localmanager
+	make prepare-buckets
+	make prepare-server-commands
+	./${START_CONTAINERS_SCRIPT_PATH}
 
 query:
-	docker run --network='host' -v ${ROOT_DIR}/${LOCAL_TEST_DATA}:/pir/test_data \
+	docker run --network='host' -v ${ROOT_DIR}/data:/pir/data \
 		-e CONFIG=${LOCAL_CONFIGS} -e USERNAME=${USERNAME} -e PWD=${PWD} \
 		pir-client
 
 build-docker:
 	 docker build . -f infra/rust/server/Dockerfile -t pir-server
 	 docker build . -f infra/rust/client/Dockerfile -t pir-client
+	 docker build . -f infra/go/creds-wrangling-utils/Dockerfile -t prepare-buckets
+	 docker build . -f infra/go/localmanager/Dockerfile -t localmanager
 
-install-tooling:
-	cd infra/go/localmanager && go install
-	cd infra/go/creds-wrangling-utils && go install
+prepare-buckets:
+	docker run -v ${ROOT_DIR}/data:/app/data -e LOCAL_CONFIGS=${LOCAL_CONFIGS} prepare-buckets
+
+prepare-server-commands:
+	docker run -v ${ROOT_DIR}/data:/app/data -e LOCAL_CONFIGS=${LOCAL_CONFIGS} -e PWD=${PWD}  \
+		-e SCRIPT_PATH=${START_CONTAINERS_SCRIPT_PATH} localmanager
 

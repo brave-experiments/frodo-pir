@@ -3,13 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
-	"sync"
 
 	yaml "gopkg.in/yaml.v3"
 )
-
-var wg sync.WaitGroup
 
 type Configs struct {
 	ContentPath string `yaml:"db_content_path"`
@@ -47,13 +43,12 @@ func main() {
 	fmt.Println("- OPRF key:", configs.OPRFKey)
 	fmt.Println("")
 
-	wg.Add(len(configs.Instances))
+	commands := ""
 
 	for i, instance := range configs.Instances {
-
 		execString := fmt.Sprintf(
-			"docker run --name %v --network='host' -v %v/test_data:/pir/test_data -p %v:%v -e ENV=local -e PORT=%v -e SHARDS_INTERVAL=%v, -e OPRF_KEY=%v, -e SHARD_DIR=%v server-instance",
-			fmt.Sprintf("server-instance-%v", i),
+			"docker run --name %v --network='host' -v %v/data:/pir/data -p %v:%v -e ENV=local -e PORT=%v -e SHARDS_INTERVAL=%v, -e OPRF_KEY=%v, -e SHARD_DIR=%v pir-server &\n\n",
+			fmt.Sprintf("pir-server-%v", i),
 			pwd,
 			instance.Port,
 			instance.Port,
@@ -63,19 +58,34 @@ func main() {
 			configs.BucketsPath,
 		)
 
-		go spinupContainer(execString, configs, instance.Port, instance.Shards)
+		commands = commands + execString
+
+		printCommand(execString, configs, instance.Port, instance.Shards)
 	}
 
-	wg.Wait()
-	fmt.Println("\nDone")
+	execShellPath := os.Getenv("SCRIPT_PATH")
+
+	nf, err := os.OpenFile(execShellPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	if err != nil {
+		panic(fmt.Sprintf("Error creating/re-writing start-server-containers.sh file: %v", err))
+	}
+
+	fmt.Println("\nWriting shell script to start docker containers to file...")
+
+	shellScript := "#!/bin/bash \n\n"
+	shellScript = shellScript + commands
+
+	_, err = nf.WriteString(shellScript)
+	if err != nil {
+		panic(fmt.Sprintf("Error writing shell script file to disk: %v", err))
+	}
+
+	fmt.Println("Done")
 }
 
-func spinupContainer(execString string, configs Configs, port, shards string) {
-	defer wg.Done()
-
+func printCommand(execString string, configs Configs, port, shards string) {
 	fmt.Println(fmt.Sprintf(
-		">> Starting server instance on a docker container with port=%v, shards=%v, oprf_key=%v. (command: %v)\n",
+		">> Configured server instance for docker container with port=%v, shards=%v, oprf_key=%v.\n command: %v",
 		port, shards, configs.OPRFKey, execString,
 	))
-	exec.Command("bash", "-c", execString).Output()
 }

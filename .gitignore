@@ -4,6 +4,7 @@ Cargo.lock
 *.json
 *.lhp
 *.bucket
+start-server-containers.sh
 
 # misc
 .DS_Store

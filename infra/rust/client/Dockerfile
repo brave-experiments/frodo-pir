@@ -11,6 +11,6 @@ RUN cargo install --path ./infra/rust/client
 
 ENV USERNAME poc-test@mail.com
 ENV PWD poc-pwd
-ENV CONFIG /pir/data/local-configs.yml
+ENV CONFIG /pir/data/local-env/local-configs.yml
 
 CMD ["sh", "-c", "pir-client --config ${CONFIG} --username ${USERNAME} --password ${PWD}"]
