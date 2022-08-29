@@ -37,7 +37,15 @@ To run the tests:
   make test
 ```
 
-To run the benchmarks (note that this process is very slow):
+To run a specific set of benchmarks, run (note the this process is slow):
+
+```
+  make bench
+```
+
+This will execute client query benchmarks and DB generation benchmarks (for more details, see the `benches/bench.rs` file).
+
+To run all benchmarks (note that this process is very slow):
 
 ```
   make bench-all
