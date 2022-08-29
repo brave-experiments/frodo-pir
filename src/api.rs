@@ -1,3 +1,4 @@
+/// The `api` module is the public entry point for all FrodoPIR database.
 use crate::db::Database;
 pub use crate::db::{BaseParams, CommonParams};
 pub use crate::utils::format::*;
@@ -8,6 +9,8 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::str;
 
+/// A `Shard` is an instance of a database, where each row corresponds 
+/// to a single element, that has been preprocessed by the server.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Shard {
     db: Database,

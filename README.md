@@ -23,7 +23,13 @@ In order to build, run, test and benchmark the library, you will need:
   Python3
 ```
 
+To install the latest version of Rust, use the following command:
+```
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
 ## Quickstart
+
 
 To build the library, run:
 
@@ -35,6 +41,12 @@ To run the tests:
 
 ```
   make test
+```
+
+To view documentation (in web browser):
+
+```
+  make docs
 ```
 
 To run a specific set of benchmarks, run (note the this process is slow):
@@ -66,28 +78,48 @@ The `src` folder contains the main *FrodoPIR* functionality. In particular:
 
 ### How to use
 
-An easy way to see how to use the library can be found on the tests on the `api.rs` file:
+An easy way to see how to use the library can be found on the tests on the `api.rs` file. For full code documentation of the code, run `make docs`. 
 
-```
-    fn client_query_e2e() {
-        let lwe_dim = 512;
-        let m = 2u32.pow(12) as usize;
-        let ele_size = 2u32.pow(8) as usize;
-        let plaintext_bits = 12usize;
-        let db_eles = generate_db_eles(m, (ele_size + 7) / 8);
-        let shard = Shard::from_base64_strings(&db_eles, lwe_dim, m, ele_size, plaintext_bits);
-        let base_params = shard.get_base_params();
-        let common_params = CommonParams::from(base_params);
-        #[allow(clippy::needless_range_loop)]
-        for i in 0..10 {
-            let mut query_params = QueryParams::new(&common_params, base_params);
-            let query = query_params.prepare_query(i);
-            let d_resp = shard.respond(&query).unwrap();
-            let resp: Response = bincode::deserialize(&d_resp).unwrap();
-            let output = resp.parse_output_as_base64(&query_params);
-            assert_eq!(output, db_eles[i]);
-        }
+```rust
+  use frodo_pir::api::*;
+  fn client_query_e2e() {
+    /* Preprocessing performed by the server */
+
+    // The LWE dimension to use
+    let lwe_dim = 1572;
+    // The number of rows in the database
+    let m = 2u32.pow(16) as usize;
+    // The length of each element in the database
+    let ele_size = 2u32.pow(13) as usize;
+    // The number of plaintext bits to use in each matrix element 
+    //   - 10 bits, for 16 ≤ log2(m) ≤ 18
+    //   - 9 bits, for log2(m) ≤ 20
+    // see Section 5 of paper for full details
+    let plaintext_bits = 10usize;
+    // Generates a random database
+    let db_eles = generate_db_eles(m, (ele_size + 7) / 8);
+    let db = Shard::from_base64_strings(&db_eles, lwe_dim, m, ele_size, plaintext_bits);
+    // Parameters used by the server
+    let base_params = db.get_base_params();
+
+    // Public parameters downloaded by the client
+    let common_params = CommonParams::from(base_params);
+    
+    /* Run client queries */
+    for i in 0..10 {
+      // Preprocess client queries before knowing query index (can be done offline)
+      let mut query_params = QueryParams::new(&common_params, base_params);
+      // Generate client query for index `i` of database
+      let query = query_params.prepare_query(i);
+      // Server response to query
+      let d_resp = db.respond(&query).unwrap();
+      // Client post-processing of server response
+      let resp: Response = bincode::deserialize(&d_resp).unwrap();
+      let output = resp.parse_output_as_base64(&query_params);
+      // Check that client output matches row `i` of server DB.
+      assert_eq!(output, db_eles[i]);
     }
+  }
 ```
 
 ## Citation
