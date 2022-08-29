@@ -1,0 +1,3 @@
+# Leaked Credentials API
+
+An API for setting up the server- and client-side for establishing privacy-preserving checking of compromised credentials using the FrodoPIR scheme. We provide both [rust-based](./src/api.rs) and [JSONRPC-based](./src/rpc.rs) APIs. We also [provide mechanisms](./src/keyword.rs) for establishing mappings between client keyword queries and the respective index in the server DB that needs to be queried.

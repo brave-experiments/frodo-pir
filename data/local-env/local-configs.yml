@@ -1,0 +1,11 @@
+db_content_path: "./test_data/creds"
+buckets_path: "./test_data/local_buckets"
+oprf_key: "VBiS3Zlp4UjLXLf9nw4GtU0j5LVfA9T+0u31skECPAY="
+buckets_per_instance: 4
+instances:
+   - port: 8081
+     shards: 0-3
+   - port: 8082
+     shards: 4-7
+   - port: 8083
+     shards: 8-11

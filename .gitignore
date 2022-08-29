@@ -2,6 +2,8 @@
 target/
 Cargo.lock
 *.json
+*.lhp
+*.bucket
 
 # misc
 .DS_Store

@@ -18,6 +18,12 @@ RUST_BACKTRACE=1
 DB_ALL_ONES=0
 DB_NUM_ENTRIES_EXP=${MATRIX_HEIGHT_EXP}
 
+# local environment values
+LOCAL_TEST_DATA=./data
+LOCAL_BUCKETS_PATH=./${LOCAL_TEST_DATA}/local_buckets
+LOCAL_CONFIGS=./${LOCAL_TEST_DATA}/local-configs.yml
+ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+
 RUST_FLAGS=RUST_BACKTRACE=${RUST_BACKTRACE}
 DB_ENV=DB_FILE=${PREVIOUS_DIR}/${DB_FILE_PATH} PARAMS_OUTPUT_PATH=${PREVIOUS_DIR}/${PARAMS_OUTPUT_PATH}
 PRELIM=${RUST_FLAGS} ${DB_ENV}
@@ -50,3 +56,27 @@ bench-all:
 	${PRELIM} ${PIR_ENV_ALL} PIR_MATRIX_HEIGHT_EXP=18 PIR_PLAINTEXT_BITS=10 ${CARGO} bench > benchmarks-18.txt
 	${PRELIM} ${PIR_ENV_ALL} PIR_MATRIX_HEIGHT_EXP=19 PIR_PLAINTEXT_BITS=9 ${CARGO} bench > benchmarks-19.txt
 	${PRELIM} ${PIR_ENV_ALL} PIR_MATRIX_HEIGHT_EXP=20 PIR_PLAINTEXT_BITS=9 ${CARGO} bench > benchmarks-20.txt
+
+# local environment make steps
+.PHONY: prepare run-server query build-docker install-tolling
+prepare:
+	make install-tooling
+	make build-docker
+
+run-server:
+	LOCAL_CONFIGS=${LOCAL_CONFIGS} prepare-buckets
+	LOCAL_CONFIGS=${LOCAL_CONFIGS} PWD=${ROOT_DIR} localmanager
+
+query:
+	docker run --network='host' -v ${ROOT_DIR}/${LOCAL_TEST_DATA}:/pir/test_data \
+		-e CONFIG=${LOCAL_CONFIGS} -e USERNAME=${USERNAME} -e PWD=${PWD} \
+		pir-client
+
+build-docker:
+	 docker build . -f infra/rust/server/Dockerfile -t pir-server
+	 docker build . -f infra/rust/client/Dockerfile -t pir-client
+
+install-tooling:
+	cd infra/go/localmanager && go install
+	cd infra/go/creds-wrangling-utils && go install
+
