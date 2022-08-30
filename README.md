@@ -14,7 +14,9 @@ Rust implementation, illustrating that FrodoPIR is eminently suitable for large 
 
 ## Requirements
 
-In order to build, run, test and benchmark the library, you will need:
+The source code can be built, tested, and benchmarked using [Docker](#using-docker).
+
+In order to [natively](#native) build, run, test and benchmark the library, you will need the following:
 
 ```
   Rust >= 1.61.0
@@ -23,13 +25,31 @@ In order to build, run, test and benchmark the library, you will need:
   Python3
 ```
 
+## Quickstart
+
+### Using Docker
+
+Build Docker image:
+```
+docker build -t frodo-pir .
+```
+
+Build and run tests:
+```
+docker run --rm frodo-pir
+```
+
+Run Docker image interactively (from here, you can run any of the `make` commands below):
+```
+docker run --rm -it --entrypoint /bin/bash frodo-pir
+```
+
+### Native
+
 To install the latest version of Rust, use the following command:
 ```
   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
-
-## Quickstart
-
 
 To build the library, run:
 
