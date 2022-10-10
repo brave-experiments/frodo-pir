@@ -96,9 +96,13 @@ The `src` folder contains the main *FrodoPIR* functionality. In particular:
   * The `db.rs` file contains the main functionality to be used for database processing.
   * The `util.rs` file contains utility functions.
 
+The `data` directory contains a python script used to generate the needed data for testing.
+The `benchs` directory contains a script used to benchmark the library.
+The `pi-rs-cli-utils` directory which contains files with util functionality.
+
 ### How to use
 
-An easy way to see how to use the library can be found on the tests on the `api.rs` file. For full code documentation of the code, run `make docs`. 
+An easy way to see how to use the library can be found on the tests on the `api.rs` file. For full code documentation of the code, run `make docs`.
 
 ```rust
   use frodo_pir::api::*;
