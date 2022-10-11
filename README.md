@@ -30,23 +30,27 @@ In order to [natively](#native) build, run, test and benchmark the library, you 
 ### Using Docker
 
 Build Docker image:
+
 ```
 docker build -t frodo-pir .
 ```
 
 Build and run tests:
+
 ```
 docker run --rm frodo-pir
 ```
 
 Run Docker image interactively (from here, you can run any of the `make` commands below):
+
 ```
 docker run --rm -it --entrypoint /bin/bash frodo-pir
 ```
 
 ### Native
 
-To install the latest version of Rust, use the following command:
+To install the latest version of Rust, use the following command (you can also check how to install on the [Rust documentation](https://www.rust-lang.org/tools/install)):
+
 ```
   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
