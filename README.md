@@ -104,6 +104,12 @@ The `pi-rs-cli-utils` directory which contains files with util functionality.
 
 An easy way to see how to use the library can be found on the tests on the `api.rs` file. For full code documentation of the code, run `make docs`.
 
+The following code is a copy of the aforementioned test. It exemplifies how FrodoPIR can be used by mocking both a server and a client.
+First, the server generates all the needed parameters in relationship to a mocked random database.
+Then, the client downloads said parameters and prepares queries (as part of the for-loop).
+Then, both server and client interact such that the server outputs the correct response.
+In order to run this example, one can run the tests.
+
 ```rust
   use frodo_pir::api::*;
   fn client_query_e2e() {
@@ -115,7 +121,7 @@ An easy way to see how to use the library can be found on the tests on the `api.
     let m = 2u32.pow(16) as usize;
     // The length of each element in the database
     let ele_size = 2u32.pow(13) as usize;
-    // The number of plaintext bits to use in each matrix element 
+    // The number of plaintext bits to use in each matrix element
     //   - 10 bits, for 16 ≤ log2(m) ≤ 18
     //   - 9 bits, for log2(m) ≤ 20
     // see Section 5 of paper for full details
@@ -128,7 +134,7 @@ An easy way to see how to use the library can be found on the tests on the `api.
 
     // Public parameters downloaded by the client
     let common_params = CommonParams::from(base_params);
-    
+
     /* Run client queries */
     for i in 0..10 {
       // Preprocess client queries before knowing query index (can be done offline)
