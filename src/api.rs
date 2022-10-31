@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::str;
 
-/// A `Shard` is an instance of a database, where each row corresponds 
+/// A `Shard` is an instance of a database, where each row corresponds
 /// to a single element, that has been preprocessed by the server.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Shard {
@@ -200,7 +200,7 @@ mod tests {
     use rand_core::{OsRng, RngCore};
 
     #[test]
-    fn client_query_e2e() {
+    fn client_query_to_server_10_times() {
         let lwe_dim = 512;
         let m = 2u32.pow(12) as usize;
         let ele_size = 2u32.pow(8) as usize;
@@ -221,7 +221,7 @@ mod tests {
     }
 
     #[test]
-    fn attempt_params_reuse() {
+    fn client_query_to_server_attempt_params_reuse() {
         let m = 2u32.pow(6) as usize;
         let ele_size = 2u32.pow(8) as usize;
         let plaintext_bits = 10usize;

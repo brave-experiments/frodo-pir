@@ -42,7 +42,7 @@ gen-db:
 build:
 	${CARGO_COMMAND} build
 test:
-	${CARGO_COMMAND} test
+	${CARGO_COMMAND} test -- --nocapture
 
 LOOPS = 100
 test-loop:
