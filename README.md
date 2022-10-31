@@ -22,7 +22,7 @@ In order to [natively](#native) build, run, test and benchmark the library, you 
   Rust >= 1.61.0
   Cargo
   Make
-  Python3
+  Python3 >= 3.9.7
 ```
 
 ## Quickstart
@@ -155,6 +155,17 @@ In order to run this example, one can run the tests.
     }
   }
 ```
+### Tests
+
+We have two big tests that the library executes:
+
+1. `client_query_to_server_10_times()` test which executes the client-to-server functionality:
+   the client asks for an item in the database and the server is able to privately return it.
+   The test asserts that the returned item is indeed the correct item in the database.
+   It executes a for loop 10 times.
+2. `client_query_to_server_attempt_params_reuse` test which executes the client-to-server
+   functionality one time. It asserts that once parameters for a query are used, they
+   are marked as so, and cannot be reused.
 
 ## Citation
 

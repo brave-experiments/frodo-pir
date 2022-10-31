@@ -189,7 +189,7 @@ mod tests {
   use rand_core::{OsRng, RngCore};
 
   #[test]
-  fn client_query_e2e() {
+  fn client_query_to_server_10_times() {
     let m = 2u32.pow(12) as usize;
     let ele_size = 2u32.pow(8) as usize;
     let plaintext_bits = 12usize;
@@ -217,7 +217,7 @@ mod tests {
   }
 
   #[test]
-  fn attempt_params_reuse() {
+  fn client_query_to_server_attempt_params_reuse() {
     let m = 2u32.pow(6) as usize;
     let ele_size = 2u32.pow(8) as usize;
     let plaintext_bits = 10usize;
