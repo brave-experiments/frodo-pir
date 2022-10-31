@@ -115,8 +115,12 @@ impl QueryParams {
     pub fn prepare_query(&mut self, row_index: usize) -> Query {
         self.used = true;
         let query_indicator = get_rounding_factor(self.plaintext_bits);
-        let mut lhs = self.lhs.clone();
-        lhs[row_index] += query_indicator;
+        let mut lhs = Vec::new();
+        lhs.clone_from(&self.lhs.clone());
+        let (result, check) = lhs[row_index].overflowing_add(query_indicator);
+        if !check {
+            lhs[row_index] = result;
+        } // TODO: the question now is what we do if we overflow
         Query(lhs)
     }
 }
