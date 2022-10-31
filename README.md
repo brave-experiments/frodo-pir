@@ -102,7 +102,7 @@ The `src` folder contains the main *FrodoPIR* functionality. In particular:
 
 The `data` directory contains a python script used to generate the needed data for testing.
 The `benchs` directory contains a script used to benchmark the library.
-The `pi-rs-cli-utils` directory which contains files with util functionality.
+The `pi-rs-cli-utils` directory contains files of 'utility' functionality.
 
 ### How to use
 

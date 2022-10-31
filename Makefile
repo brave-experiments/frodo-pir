@@ -43,6 +43,11 @@ build:
 	${CARGO_COMMAND} build
 test:
 	${CARGO_COMMAND} test
+
+LOOPS = 100
+test-loop:
+	for ((i=1; i <= ${LOOPS}; ++i)) do make test && echo $$i || break; done
+
 docs:
 	${CARGO} doc --open --no-deps
 bench:
