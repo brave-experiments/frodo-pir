@@ -195,9 +195,14 @@ mod tests {
     let plaintext_bits = 12usize;
     let lwe_dim = 512;
     let db_eles = generate_db_eles(m, (ele_size + 7) / 8);
-    let shard =
-      Shard::from_base64_strings(&db_eles, lwe_dim, m, ele_size, plaintext_bits)
-        .unwrap();
+    let shard = Shard::from_base64_strings(
+      &db_eles,
+      lwe_dim,
+      m,
+      ele_size,
+      plaintext_bits,
+    )
+    .unwrap();
     let bp = shard.get_base_params();
     let cp = CommonParams::from(bp);
     #[allow(clippy::needless_range_loop)]
@@ -218,9 +223,14 @@ mod tests {
     let plaintext_bits = 10usize;
     let lwe_dim = 512;
     let db_eles = generate_db_eles(m, (ele_size + 7) / 8);
-    let shard =
-      Shard::from_base64_strings(&db_eles, lwe_dim, m, ele_size, plaintext_bits)
-        .unwrap();
+    let shard = Shard::from_base64_strings(
+      &db_eles,
+      lwe_dim,
+      m,
+      ele_size,
+      plaintext_bits,
+    )
+    .unwrap();
     let bp = shard.get_base_params();
     let cp = CommonParams::from(bp);
     let mut qp = QueryParams::new(&cp, bp).unwrap();
