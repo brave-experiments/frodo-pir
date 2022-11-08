@@ -27,7 +27,7 @@ impl Shard {
     m: usize,
     ele_size: usize,
     plaintext_bits: usize,
-  ) -> Self {
+  ) -> ResultBoxedError<Self> {
     let file_contents: String =
       fs::read_to_string(file_path).unwrap().parse().unwrap();
     let elements: Vec<String> = serde_json::from_str(&file_contents).unwrap();
