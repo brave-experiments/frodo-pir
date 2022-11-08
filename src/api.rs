@@ -1,9 +1,9 @@
 use crate::db::Database;
 pub use crate::db::{BaseParams, CommonParams};
+use crate::errors::{ErrorQueryParamsReused, ResultBoxedError};
 pub use crate::utils::format::*;
 use crate::utils::lwe::*;
 use crate::utils::matrices::*;
-use errors::PIRError;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::str;
@@ -21,10 +21,10 @@ impl Shard {
     m: usize,
     ele_size: usize,
     plaintext_bits: usize,
-  ) -> Self {
-    let file_contents: String =
-      fs::read_to_string(file_path).unwrap().parse().unwrap();
-    let elements: Vec<String> = serde_json::from_str(&file_contents).unwrap();
+  ) -> ResultBoxedError<Self> {
+    let file_contents: String = fs::read_to_string(file_path)?.parse()?;
+    let elements: Vec<String> = serde_json::from_str(&file_contents)?;
+
     Shard::from_base64_strings(&elements, lwe_dim, m, ele_size, plaintext_bits)
   }
 
@@ -36,21 +36,26 @@ impl Shard {
     m: usize,
     ele_size: usize,
     plaintext_bits: usize,
-  ) -> Self {
-    let db = Database::new(base64_strs, m, ele_size, plaintext_bits);
+  ) -> ResultBoxedError<Self> {
+    let db = Database::new(base64_strs, m, ele_size, plaintext_bits)?;
     let base_params = BaseParams::new(&db, lwe_dim);
-    Self { db, base_params }
+    Ok(Self { db, base_params })
   }
 
   /// Write base_params and DB to file
-  pub fn write_to_file(&self, db_path: &str, params_path: &str) {
-    self.db.write_to_file(db_path);
-    self.base_params.write_to_file(params_path);
+  pub fn write_to_file(
+    &self,
+    db_path: &str,
+    params_path: &str,
+  ) -> ResultBoxedError<()> {
+    self.db.write_to_file(db_path)?;
+    self.base_params.write_to_file(params_path)?;
+    Ok(())
   }
 
   // Produces a serialized response (base64-encoded) to a serialized
   // client query
-  pub fn respond(&self, q: &Query) -> Result<Vec<u8>, PIRError> {
+  pub fn respond(&self, q: &Query) -> ResultBoxedError<Vec<u8>> {
     let resp = Response(
       (0..self.db.get_matrix_width_self())
         .into_iter()
@@ -58,10 +63,8 @@ impl Shard {
         .collect(),
     );
     let se = bincode::serialize(&resp);
-    if let Err(e) = se {
-      return Err(PIRError::SerdeError(e.to_string()));
-    }
-    Ok(se.unwrap())
+
+    Ok(se?)
   }
 
   pub fn get_db(&self) -> &Database {
@@ -84,7 +87,7 @@ impl Shard {
 
 /// The `QueryParams` struct is initialized to be used for a client
 /// query.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct QueryParams {
   lhs: Vec<u32>,
   rhs: Vec<u32>,
@@ -93,24 +96,27 @@ pub struct QueryParams {
   pub used: bool,
 }
 impl QueryParams {
-  pub fn new(cp: &CommonParams, bp: &BaseParams) -> Self {
+  pub fn new(cp: &CommonParams, bp: &BaseParams) -> ResultBoxedError<Self> {
     let s = random_ternary_vector(bp.get_dim());
-    Self {
-      lhs: cp.mult_left(&s),
-      rhs: bp.mult_right(&s),
+    Ok(Self {
+      lhs: cp.mult_left(&s)?,
+      rhs: bp.mult_right(&s)?,
       ele_size: bp.get_ele_size(),
       plaintext_bits: bp.get_plaintext_bits(),
       used: false,
-    }
+    })
   }
 
   /// Prepares a new client query based on an input row_index
-  pub fn prepare_query(&mut self, row_index: usize) -> Query {
+  pub fn prepare_query(&mut self, row_index: usize) -> ResultBoxedError<Query> {
+    if self.used {
+      return Err(Box::new(ErrorQueryParamsReused {}));
+    }
     self.used = true;
     let query_indicator = get_rounding_factor(self.plaintext_bits);
     let mut lhs = self.lhs.clone();
     lhs[row_index] += query_indicator;
-    Query(lhs)
+    Ok(Query(lhs))
   }
 }
 
@@ -157,30 +163,15 @@ impl Response {
   }
 
   /// Parses the output as a base64-encoded string
+  pub fn parse_output_as_bytes(&self, qp: &QueryParams) -> Vec<u8> {
+    let row = self.parse_output_as_row(qp);
+    bytes_from_u32_slice(&row, qp.plaintext_bits, qp.ele_size)
+  }
+
+  /// Parses the output as a base64-encoded string
   pub fn parse_output_as_base64(&self, qp: &QueryParams) -> String {
     let row = self.parse_output_as_row(qp);
     base64_from_u32_slice(&row, qp.plaintext_bits, qp.ele_size)
-  }
-}
-
-pub mod errors {
-  use std::fmt;
-
-  #[derive(Debug, Clone, PartialEq)]
-  pub enum PIRError {
-    UsedQueryParamsError,
-    SerdeError(String),
-  }
-
-  impl std::error::Error for PIRError {}
-
-  impl fmt::Display for PIRError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-      match self {
-        PIRError::UsedQueryParamsError => write!(f, "Query parameters have already been used for generating client query."),
-        PIRError::SerdeError(e) => write!(f, "Error occurred during serialization: {}.", e),
-      }
-    }
   }
 }
 
@@ -197,13 +188,14 @@ mod tests {
     let dim = 512;
     let db_eles = generate_db_eles(m, (ele_size + 7) / 8);
     let shard =
-      Shard::from_base64_strings(&db_eles, dim, m, ele_size, plaintext_bits);
+      Shard::from_base64_strings(&db_eles, dim, m, ele_size, plaintext_bits)
+        .unwrap();
     let bp = shard.get_base_params();
     let cp = CommonParams::from(bp);
     #[allow(clippy::needless_range_loop)]
     for i in 0..10 {
-      let mut qp = QueryParams::new(&cp, bp);
-      let q = qp.prepare_query(i);
+      let mut qp = QueryParams::new(&cp, bp).unwrap();
+      let q = qp.prepare_query(i).unwrap();
       let d_resp = shard.respond(&q).unwrap();
       let resp: Response = bincode::deserialize(&d_resp).unwrap();
       let output = resp.parse_output_as_base64(&qp);
@@ -219,15 +211,21 @@ mod tests {
     let dim = 512;
     let db_eles = generate_db_eles(m, (ele_size + 7) / 8);
     let shard =
-      Shard::from_base64_strings(&db_eles, dim, m, ele_size, plaintext_bits);
+      Shard::from_base64_strings(&db_eles, dim, m, ele_size, plaintext_bits)
+        .unwrap();
     let bp = shard.get_base_params();
     let cp = CommonParams::from(bp);
-    let mut qp = QueryParams::new(&cp, bp);
+    let mut qp = QueryParams::new(&cp, bp).unwrap();
     // should be successful in generating a query
-    qp.prepare_query(0);
+    let res_unused = qp.prepare_query(0);
+    assert!(res_unused.is_ok());
 
     // should be "used"
     assert!(qp.used);
+
+    // should be successful in generating a query
+    let res = qp.prepare_query(0);
+    assert!(res.is_err());
   }
 
   fn generate_db_eles(num_eles: usize, ele_byte_len: usize) -> Vec<String> {

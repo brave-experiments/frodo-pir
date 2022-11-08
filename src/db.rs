@@ -5,6 +5,7 @@ use rand_core::{OsRng, RngCore};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
+use crate::errors::ResultBoxedError;
 use crate::utils::format::*;
 use crate::utils::matrices::*;
 
@@ -21,40 +22,18 @@ impl Database {
     m: usize,
     ele_size: usize,
     plaintext_bits: usize,
-  ) -> Self {
-    Self {
+  ) -> ResultBoxedError<Self> {
+    Ok(Self {
       entries: swap_matrix_fmt(&construct_rows(
         elements,
         m,
         ele_size,
         plaintext_bits,
-      )),
+      )?),
       m,
       ele_size,
       plaintext_bits,
-    }
-  }
-
-  pub fn load(
-    db_file: &str,
-    m: usize,
-    ele_size: usize,
-    plaintext_bits: usize,
-  ) -> Self {
-    let file_contents: String =
-      fs::read_to_string(db_file).unwrap().parse().unwrap();
-    let elements: Vec<String> = serde_json::from_str(&file_contents).unwrap();
-    Self {
-      entries: swap_matrix_fmt(&construct_rows(
-        &elements,
-        m,
-        ele_size,
-        plaintext_bits,
-      )),
-      m,
-      ele_size,
-      plaintext_bits,
-    }
+    })
   }
 
   pub fn from_file(
@@ -62,16 +41,10 @@ impl Database {
     m: usize,
     ele_size: usize,
     plaintext_bits: usize,
-  ) -> Self {
-    let file_contents: String =
-      fs::read_to_string(db_file).unwrap().parse().unwrap();
-    let entries: Vec<Vec<u32>> = serde_json::from_str(&file_contents).unwrap();
-    Self {
-      entries,
-      m,
-      ele_size,
-      plaintext_bits,
-    }
+  ) -> ResultBoxedError<Self> {
+    let file_contents: String = fs::read_to_string(db_file)?.parse()?;
+    let elements: Vec<String> = serde_json::from_str(&file_contents)?;
+    Self::new(&elements, m, ele_size, plaintext_bits)
   }
 
   pub fn switch_fmt(&mut self) {
@@ -86,9 +59,9 @@ impl Database {
     acc
   }
 
-  pub fn write_to_file(&self, path: &str) {
+  pub fn write_to_file(&self, path: &str) -> ResultBoxedError<()> {
     let json = json!(self.entries);
-    serde_json::to_writer(&fs::File::create(path).unwrap(), &json).unwrap();
+    Ok(serde_json::to_writer(&fs::File::create(path)?, &json)?)
   }
 
   /// Returns the ith row of the DB matrix
@@ -157,9 +130,9 @@ impl BaseParams {
   }
 
   /// Load params from a JSON file
-  pub fn load(params_path: &str) -> Self {
-    let reader = BufReader::new(fs::File::open(params_path).unwrap());
-    serde_json::from_reader(reader).unwrap()
+  pub fn load(params_path: &str) -> ResultBoxedError<Self> {
+    let reader = BufReader::new(fs::File::open(params_path)?);
+    Ok(serde_json::from_reader(reader)?)
   }
 
   /// Generates the RHS of the params using the database and the seed
@@ -184,16 +157,16 @@ impl BaseParams {
   }
 
   /// Writes the params struct as JSON to file
-  pub fn write_to_file(&self, path: &str) {
+  pub fn write_to_file(&self, path: &str) -> ResultBoxedError<()> {
     let json = json!({
       "lhs_seed": self.lhs_seed,
       "rhs": self.rhs,
     });
-    serde_json::to_writer(&fs::File::create(path).unwrap(), &json).unwrap();
+    Ok(serde_json::to_writer(&fs::File::create(path)?, &json)?)
   }
 
   /// Computes s*(A*DB) using the RHS of the public parameters
-  pub fn mult_right(&self, s: &[u32]) -> Vec<u32> {
+  pub fn mult_right(&self, s: &[u32]) -> ResultBoxedError<Vec<u32>> {
     let cols = &self.rhs;
     (0..cols.len())
       .into_iter()
@@ -220,6 +193,7 @@ impl BaseParams {
 
 /// `CommonParams` holds the derived uniform matrix that is used for
 /// constructing server public parameters and the client query.
+#[derive(Serialize, Deserialize)]
 pub struct CommonParams(Vec<Vec<u32>>);
 impl CommonParams {
   // Returns the internal matrix
@@ -229,27 +203,19 @@ impl CommonParams {
 
   /// Computes s*A + e using the seed used to generate the LHS matrix of
   /// the public parameters
-  pub fn mult_left(&self, s: &[u32]) -> Vec<u32> {
+  pub fn mult_left(&self, s: &[u32]) -> ResultBoxedError<Vec<u32>> {
     let cols = self.as_matrix();
     (0..cols.len())
       .into_iter()
       .map(|i| {
-        let s_a = vec_mult_u32_u32(s, &cols[i]);
+        let s_a = vec_mult_u32_u32(s, &cols[i])?;
         let e = random_ternary();
-        s_a.wrapping_add(e)
+        Ok(s_a.wrapping_add(e))
       })
       .collect()
   }
 }
-impl From<BaseParams> for CommonParams {
-  fn from(params: BaseParams) -> Self {
-    Self(get_lwe_matrix_from_seed(
-      params.lhs_seed,
-      params.dim,
-      params.m,
-    ))
-  }
-}
+
 impl From<&BaseParams> for CommonParams {
   fn from(params: &BaseParams) -> Self {
     Self(get_lwe_matrix_from_seed(
@@ -265,26 +231,26 @@ fn construct_rows(
   m: usize,
   ele_size: usize,
   plaintext_bits: usize,
-) -> Vec<Vec<u32>> {
+) -> ResultBoxedError<Vec<Vec<u32>>> {
   let row_width = Database::get_matrix_width(ele_size, plaintext_bits);
-  (0..m)
-    .into_iter()
-    .map(|i| {
-      let mut row = Vec::with_capacity(row_width);
-      let data = &elements[i];
-      let bytes = base64::decode(&data).unwrap();
-      let bits = bytes_to_bits_le(&bytes);
-      for i in 0..row_width {
-        let end_bound = (i + 1) * plaintext_bits;
-        if end_bound < bits.len() {
-          row.push(bits_to_u32_le(&bits[i * plaintext_bits..end_bound]));
-        } else {
-          row.push(bits_to_u32_le(&bits[i * plaintext_bits..]));
-        }
+
+  let result = (0..m).into_iter().map(|i| -> ResultBoxedError<Vec<u32>> {
+    let mut row = Vec::with_capacity(row_width);
+    let data = &elements[i];
+    let bytes = base64::decode(&data)?;
+    let bits = bytes_to_bits_le(&bytes);
+    for i in 0..row_width {
+      let end_bound = (i + 1) * plaintext_bits;
+      if end_bound < bits.len() {
+        row.push(bits_to_u32_le(&bits[i * plaintext_bits..end_bound])?);
+      } else {
+        row.push(bits_to_u32_le(&bits[i * plaintext_bits..])?);
       }
-      row
-    })
-    .collect()
+    }
+    Ok(row)
+  });
+
+  result.collect()
 }
 
 fn generate_seed() -> [u8; 32] {

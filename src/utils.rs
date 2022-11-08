@@ -28,6 +28,9 @@ pub mod matrices {
   use rand::rngs::StdRng;
   use rand_core::{OsRng, RngCore, SeedableRng};
 
+  use crate::errors::ErrorUnexpectedInputSize;
+  use crate::errors::ResultBoxedError;
+
   /// Takes a matrix in row (column) format, and returns it in column (row) format
   pub fn swap_matrix_fmt(matrix: &[Vec<u32>]) -> Vec<Vec<u32>> {
     let height = matrix.len();
@@ -60,15 +63,21 @@ pub mod matrices {
   }
 
   /// Multiplies a u32 vector with a u32 column vector
-  pub fn vec_mult_u32_u32(row: &[u32], col: &[u32]) -> u32 {
+  pub fn vec_mult_u32_u32(row: &[u32], col: &[u32]) -> ResultBoxedError<u32> {
     if row.len() != col.len() {
-      panic!("row_len: {}, col_len: {}", row.len(), col.len());
+      //panic!("row_len: {}, col_len: {}", row.len(), col.len());
+
+      return Err(Box::new(ErrorUnexpectedInputSize::new(&format!(
+        "row_len: {}, col_len:{},",
+        row.len(),
+        col.len(),
+      ))));
     }
     let mut acc = 0u32;
     for i in 0..row.len() {
       acc = acc.wrapping_add(row[i].wrapping_mul(col[i]));
     }
-    acc
+    Ok(acc)
   }
 
   /// Returns a seeded RNG for sampling values
@@ -76,19 +85,33 @@ pub mod matrices {
     StdRng::from_seed(s)
   }
 
+  // Values used to denote the size of intervals that are used for
+  // sampling ternary values, and a max bound that dictates when
+  // randomly sampled values should be rejected.
+  const TERNARY_INTERVAL_SIZE: u32 = (u32::MAX - 2) / 3;
+  // Note `TERNARY_REJECTION_SAMPLING_MAX ≠ u32::MAX`
+  const TERNARY_REJECTION_SAMPLING_MAX: u32 = TERNARY_INTERVAL_SIZE * 3;
+
   /// Simulates a ternary error by sampling randomly, using rejection
-  /// sampling, from {0,1,u32::MAX}
+  /// sampling, from {0,1,u32::MAX} which is equivalent to {0,1,-1} when
+  /// performing modular reduction.
   pub fn random_ternary() -> u32 {
-    let zero_bound = u32::MAX / 3;
+    // We need to do rejection sampling for sampling randomly from 3
+    // possible values: we first divide the full interval by 3, noting
+    // that rounding is performed to the next _lowest_ integer.
     let mut val = OsRng.next_u32();
-    while val > zero_bound * 3 {
-      // reject until below max bound
+    // If the value sampled sits in the interval:
+    //                `interval*3 < val < U32::MAX`
+    // then we need to reject it and resample until it firs below `interval*3`
+    while val > TERNARY_REJECTION_SAMPLING_MAX {
       val = OsRng.next_u32();
     }
+    // Now we return {0,1,-1} depending on whether the sampled value
+    // sits in the first, second or third sampling interval
     let mut tern = 0;
-    if val > zero_bound && val <= zero_bound * 2 {
+    if val > TERNARY_INTERVAL_SIZE && val <= TERNARY_INTERVAL_SIZE * 2 {
       tern = 1;
-    } else if val > zero_bound * 2 {
+    } else if val > TERNARY_INTERVAL_SIZE * 2 {
       tern = u32::MAX;
     }
     tern
@@ -107,6 +130,7 @@ pub mod matrices {
 
 /// Functionality related to manipulation of data formats that are used
 pub mod format {
+  use crate::errors::ErrorUnexpectedInputSize;
   use std::convert::TryInto;
 
   fn u8_to_bits_le(byte: u8) -> Vec<bool> {
@@ -150,34 +174,45 @@ pub mod format {
       })
   }
 
-  pub fn bits_to_u32_le(bits: &[bool]) -> u32 {
+  pub fn bits_to_u32_le(
+    bits: &[bool],
+  ) -> Result<u32, ErrorUnexpectedInputSize> {
     let mut bytes = bits_to_bytes_le(bits);
     let u32_len = std::mem::size_of::<u32>();
     let byte_len = bytes.len();
     if byte_len > u32_len {
-      panic!("bytes are too long to parse as u16, length: {}", byte_len);
+      return Err(ErrorUnexpectedInputSize::new(&format!(
+        "bytes are too long to parse as u16, length: {}",
+        byte_len
+      )));
     }
     let padding = vec![0u8; u32_len - byte_len];
     bytes.extend(padding);
 
-    u32::from_le_bytes(u32_sized_bytes_from_vec(bytes))
+    Ok(u32::from_le_bytes(u32_sized_bytes_from_vec(bytes)?))
   }
 
-  pub fn u32_sized_bytes_from_vec(bytes: Vec<u8>) -> [u8; 4] {
-    bytes.try_into().unwrap_or_else(|v: Vec<u8>| {
-      panic!(
-        "Expected a Vec of length {} but it was {}",
-        std::mem::size_of::<u32>(),
-        v.len()
-      )
-    })
+  pub fn u32_sized_bytes_from_vec(
+    bytes: Vec<u8>,
+  ) -> Result<[u8; 4], ErrorUnexpectedInputSize> {
+    let sized_vec: [u8; 4] = match bytes.try_into() {
+      Ok(b) => b,
+      Err(e) => {
+        return Err(ErrorUnexpectedInputSize::new(&format!(
+          "Unexpected vector size: {:?}",
+          e,
+        )))
+      }
+    };
+
+    Ok(sized_vec)
   }
 
-  pub fn base64_from_u32_slice(
+  pub fn bytes_from_u32_slice(
     v: &[u32],
     entry_bit_len: usize,
     total_bit_len: usize,
-  ) -> String {
+  ) -> Vec<u8> {
     let remainder = total_bit_len % entry_bit_len;
     let mut bits = Vec::with_capacity(entry_bit_len * v.len());
     for i in 0..v.len() {
@@ -189,7 +224,14 @@ pub mod format {
         bits.extend(u32_to_bits_le(v[i], remainder));
       }
     }
-    let bytes = bits_to_bytes_le(&bits);
-    base64::encode(bytes)
+    bits_to_bytes_le(&bits)
+  }
+
+  pub fn base64_from_u32_slice(
+    v: &[u32],
+    entry_bit_len: usize,
+    total_bit_len: usize,
+  ) -> String {
+    base64::encode(bytes_from_u32_slice(v, entry_bit_len, total_bit_len))
   }
 }

@@ -1,15 +1,3 @@
 # FrodoPIR
 
-An implementation of the FrodoPIR Private Information Retrieval scheme.
-
-## Quickstart
-
-Tests:
-```
-make test
-```
-
-Benchmarks (very slow):
-```
-make bench-all
-```
+An implementation of the FrodoPIR Private Information Retrieval scheme. For usage examples, see the [leaked credentials API](../leaked-creds-api).

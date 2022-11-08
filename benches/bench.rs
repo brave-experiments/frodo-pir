@@ -18,7 +18,8 @@ fn criterion_benchmark(c: &mut Criterion) {
   println!("Setting up DB for benchmarking...");
   let db_eles = bench_utils::generate_db_eles(m, (ele_size + 7) / 8);
   let shard =
-    Shard::from_base64_strings(&db_eles, lwe_dim, m, ele_size, plaintext_bits);
+    Shard::from_base64_strings(&db_eles, lwe_dim, m, ele_size, plaintext_bits)
+      .unwrap();
   println!("Setup complete, starting benchmarks");
   if BENCH_ONLINE {
     _bench_client_query(&mut lwe_group, &shard);
@@ -68,7 +69,8 @@ fn _bench_db_generation(
           db.get_matrix_height(),
           db.get_ele_size(),
           db.get_plaintext_bits(),
-        );
+        )
+        .unwrap();
       });
     },
   );
@@ -85,8 +87,8 @@ fn _bench_client_query(
   let idx = 10;
 
   println!("Starting client query benchmarks");
-  let mut _qp = QueryParams::new(&cp, bp);
-  let _q = _qp.prepare_query(idx);
+  let mut _qp = QueryParams::new(&cp, bp).unwrap();
+  let _q = _qp.prepare_query(idx).unwrap();
   let mut _resp = shard.respond(&_q).unwrap();
   c.bench_function(
     format!(
@@ -109,7 +111,8 @@ fn _bench_client_query(
     ),
     |b| {
       b.iter(|| {
-        _qp.prepare_query(idx);
+        _qp.used = false;
+        _qp.prepare_query(idx).unwrap();
       });
     },
   );
