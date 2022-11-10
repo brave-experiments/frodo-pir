@@ -126,7 +126,7 @@ impl QueryParams {
     lhs.clone_from(&self.lhs.clone());
     let (result, check) = lhs[row_index].overflowing_add(query_indicator);
     if !check {
-        lhs[row_index] = result;
+      lhs[row_index] = result;
     } // TODO: the question now is what we do if we overflow
     Ok(Query(lhs))
   }
