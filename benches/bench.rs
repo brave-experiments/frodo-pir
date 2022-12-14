@@ -111,6 +111,7 @@ fn _bench_client_query(
     ),
     |b| {
       b.iter(|| {
+        _qp.used = false;
         _qp.prepare_query(idx).unwrap();
       });
     },

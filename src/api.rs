@@ -135,7 +135,7 @@ impl QueryParams {
 /// The `Query` struct holds the necessary information encoded in
 /// a client PIR query to the server DB for a particular `row_index`. It
 /// provides methods for parsing server responses.
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Query(Vec<u32>);
 impl Query {
   pub fn as_slice(&self) -> &[u32] {
