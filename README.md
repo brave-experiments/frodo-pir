@@ -73,7 +73,7 @@ To view documentation (in web browser):
   make docs
 ```
 
-To run a specific set of benchmarks, run (note the this process is slow):
+To run a specific set of benchmarks, run (note the this process is slow. On average, it takes 12 minutes):
 
 ```
   make bench

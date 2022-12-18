@@ -1,6 +1,7 @@
 use criterion::{criterion_group, criterion_main, BenchmarkGroup, Criterion};
 use frodo_pir::api::{CommonParams, QueryParams, Response, Shard};
 use pi_rs_cli_utils::*;
+use std::time::Duration;
 
 const BENCH_ONLINE: bool = true;
 const BENCH_DB_GEN: bool = true;
@@ -26,6 +27,7 @@ fn criterion_benchmark(c: &mut Criterion) {
   }
   if BENCH_DB_GEN {
     lwe_group.sample_size(10);
+    lwe_group.measurement_time(Duration::from_secs(100));
     _bench_db_generation(&mut lwe_group, &shard, &db_eles);
   }
 }
@@ -74,6 +76,7 @@ fn _bench_db_generation(
       });
     },
   );
+  println!("Finished DB generation benchmarks");
 }
 
 fn _bench_client_query(
@@ -145,6 +148,7 @@ fn _bench_client_query(
       });
     },
   );
+  println!("Finished client query benchmarks");
 }
 
 mod bench_utils {
