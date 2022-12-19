@@ -27,27 +27,9 @@ In order to [natively](#native) build, run, test and benchmark the library, you 
 
 ## Quickstart
 
-### Using Docker
+### Local
 
-Build Docker image:
-
-```
-docker build -t frodo-pir .
-```
-
-Build and run tests:
-
-```
-docker run --rm frodo-pir
-```
-
-Run Docker image interactively (from here, you can run any of the `make` commands below):
-
-```
-docker run --rm -it --entrypoint /bin/bash frodo-pir
-```
-
-### Native
+#### Building
 
 To install the latest version of Rust, use the following command (you can also check how to install on the [Rust documentation](https://www.rust-lang.org/tools/install)):
 
@@ -61,17 +43,27 @@ To build the library, run:
   make build
 ```
 
+#### Testing
+
 To run the tests:
 
 ```
   make test
 ```
 
+**Note**
+
+Occasionally, one of the tests will fail with a `thread 'api::tests::client_query_to_server_10_times' panicked at `'assertion failed: `(left == right)` error. This is due to the usage of specific parameters for testing and can be safely ingnored.
+
+#### Documentation
+
 To view documentation (in web browser):
 
 ```
   make docs
 ```
+
+#### Benchmarking
 
 To run a specific set of benchmarks, run (note the this process is slow. On average, it takes 12 minutes):
 
@@ -90,6 +82,28 @@ To run all benchmarks (note that this process is very slow, it takes around 30 m
 **Note**
 
 When running the benches, a warning might appear ``Warning: Unable to complete 10 samples in 100.0s. You may wish to increase target time to 486.6s.``. If you want to silence the warning, you can change line 30 of `benches/bech.rs` file to 500 or more. Note that this will make the running of benches slower.
+
+### Using Docker
+
+The same notes as in the previous section also apply here.
+
+Build Docker image:
+
+```
+docker build -t frodo-pir .
+```
+
+Build and run tests:
+
+```
+docker run --rm frodo-pir
+```
+
+Run Docker image interactively (from here, you can run any of the `make` commands below):
+
+```
+docker run --rm -it --entrypoint /bin/bash frodo-pir
+```
 
 ## Overview
 
