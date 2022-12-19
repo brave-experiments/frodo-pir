@@ -55,6 +55,11 @@ To run the tests:
   make test
 ```
 
+We test:
+
+* A client and server workflow when using FrodoPIR (10 times).
+* A test to check that the library fails if parameters are reused.
+
 If all test build and run correctly, you should see an `ok` next to them.
 
 **Note**: Occasionally, one of the tests will fail with a `thread 'api::tests::client_query_to_server_10_times' panicked at 'assertion failed: (left == right)` error. This is due to the usage of specific parameters for testing and can be safely ignored.
