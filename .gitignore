@@ -5,3 +5,8 @@ Cargo.lock
 
 # misc
 .DS_Store
+
+benchmarks-16.txt
+benchmarks-17.txt
+benchmarks-18.txt
+benchmarks-19.txt
