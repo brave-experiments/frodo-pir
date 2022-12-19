@@ -27,7 +27,7 @@ fn criterion_benchmark(c: &mut Criterion) {
   }
   if BENCH_DB_GEN {
     lwe_group.sample_size(10);
-    lwe_group.measurement_time(Duration::from_secs(100));
+    lwe_group.measurement_time(Duration::from_secs(100)); // To remove a warning, you can increase this to 500 or more.
     _bench_db_generation(&mut lwe_group, &shard, &db_eles);
   }
 }

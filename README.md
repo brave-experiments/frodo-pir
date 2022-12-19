@@ -79,13 +79,17 @@ To run a specific set of benchmarks, run (note the this process is slow. On aver
   make bench
 ```
 
-This will execute client query benchmarks and DB generation benchmarks (for more details, see the `benches/bench.rs` file).
+This will execute client query benchmarks and DataBase generation benchmarks (for more details, see the `benches/bench.rs` file).
 
-To run all benchmarks (note that this process is very slow):
+To run all benchmarks (note that this process is very slow, it takes around 30 minutes):
 
 ```
   make bench-all
 ```
+
+**Note**
+
+When running the benches, a warning might appear ``Warning: Unable to complete 10 samples in 100.0s. You may wish to increase target time to 486.6s.``. If you want to silence the warning, you can change line 30 of `benches/bech.rs` file to 500 or more. Note that this will make the running of benches slower.
 
 ## Overview
 
