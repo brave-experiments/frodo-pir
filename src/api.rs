@@ -1,7 +1,9 @@
 /// The `api` module is the public entry point for all FrodoPIR database.
 use crate::db::Database;
 pub use crate::db::{BaseParams, CommonParams};
-use crate::errors::{ErrorQueryParamsReused, ResultBoxedError};
+use crate::errors::{
+  ErrorOverflownAdd, ErrorQueryParamsReused, ResultBoxedError,
+};
 pub use crate::utils::format::*;
 use crate::utils::lwe::*;
 use crate::utils::matrices::*;
@@ -83,7 +85,6 @@ impl Shard {
     &self.base_params
   }
 
-  // TODO: alex: do we need this?
   pub fn into_row_iter(&self) -> std::vec::IntoIter<std::string::String> {
     (0..self.get_db().get_matrix_height())
       .into_iter()
@@ -127,7 +128,9 @@ impl QueryParams {
     let (result, check) = lhs[row_index].overflowing_add(query_indicator);
     if !check {
       lhs[row_index] = result;
-    } // TODO: the question now is what we do if we overflow
+    } else {
+      return Err(Box::new(ErrorOverflownAdd {}));
+    }
     Ok(Query(lhs))
   }
 }

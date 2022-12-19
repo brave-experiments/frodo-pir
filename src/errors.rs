@@ -49,3 +49,17 @@ impl Error for ErrorQueryParamsReused {
     ""
   }
 }
+
+// ErrorOverflownAdd blocks attempts to overflown addition.
+#[derive(Debug)]
+pub struct ErrorOverflownAdd {}
+impl Display for ErrorOverflownAdd {
+  fn fmt(&self, f: &mut Formatter) -> FmtResult {
+    write!(f, "Attempted to overflow addition")
+  }
+}
+impl Error for ErrorOverflownAdd {
+  fn description(&self) -> &str {
+    ""
+  }
+}
