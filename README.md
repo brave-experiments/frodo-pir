@@ -1,5 +1,7 @@
 # FrodoPIR
 
+![FrodoPIR workflow](https://github.com/brave-experiments/frodo-pir/actions/workflows/rust.yml/badge.svg)
+
 An implementation of the FrodoPIR Private Information Retrieval scheme. Find the details over [our eprint paper](https://eprint.iacr.org/2022/981.pdf).
 
 We design *FrodoPIR*, a highly configurable, stateful, single-server Private Information Retrieval (PIR)
