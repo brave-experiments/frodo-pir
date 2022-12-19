@@ -51,9 +51,7 @@ To run the tests:
   make test
 ```
 
-**Note**
-
-Occasionally, one of the tests will fail with a `thread 'api::tests::client_query_to_server_10_times' panicked at `'assertion failed: `(left == right)` error. This is due to the usage of specific parameters for testing and can be safely ingnored.
+**Note**: Occasionally, one of the tests will fail with a `thread 'api::tests::client_query_to_server_10_times' panicked at `'assertion failed: `(left == right)` error. This is due to the usage of specific parameters for testing and can be safely ingnored.
 
 #### Documentation
 
@@ -79,9 +77,7 @@ To run all benchmarks (note that this process is very slow, it takes around 30 m
   make bench-all
 ```
 
-**Note**
-
-When running the benches, a warning might appear ``Warning: Unable to complete 10 samples in 100.0s. You may wish to increase target time to 486.6s.``. If you want to silence the warning, you can change line 30 of `benches/bech.rs` file to 500 or more. Note that this will make the running of benches slower.
+**Note**: When running the benches, a warning might appear ``Warning: Unable to complete 10 samples in 100.0s. You may wish to increase target time to 486.6s.``. If you want to silence the warning, you can change line 30 of `benches/bech.rs` file to 500 or more. Note that this will make the running of benches slower.
 
 ### Using Docker
 
