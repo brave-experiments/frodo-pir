@@ -25,6 +25,8 @@ In order to [natively](#native) build, run, test and benchmark the library, you 
   Python3 >= 3.9.7
 ```
 
+To obtain our performance numbers as reported in our paper, we run our benchmarks on an AWS EC2 c5n.metal instance.
+
 ## Quickstart
 
 ### Local
@@ -85,6 +87,7 @@ In order to see the results of the benchmarks, navigate to the `benchmarks-x.txt
 
 To interpret it in regards to Table 6 of our paper: `client query prepare` corresponds to the `Client query` row, `server response compute` corresponds to the `Server response` row, `client parse server response` corresponds to the `Client output` row, `generate db and params`, corresponds to the `Database preprocessing` row, `derive LHS from seed` corresponds to the `Client derive matrix` row, and `create client query params` corresponds to `Client query preprocessing` row.
 
+![Performance numbers for FrodoPIR](/images/performance.png "Performance numbers for FrodoPIR")
 
 If all benches build and run correctly, you should see an `Finished ... benchmarks` under them.
 We use [Criterion](https://bheisler.github.io/criterion.rs/book/index.html) for benchmarking.
