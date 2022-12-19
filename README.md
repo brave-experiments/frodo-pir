@@ -71,13 +71,18 @@ To run a specific set of benchmarks, run (note the this process is slow. On aver
   make bench
 ```
 
-This will execute client query benchmarks and DataBase generation benchmarks (for more details, see the `benches/bench.rs` file).
+This command will execute client query benchmarks and Database generation benchmarks (for more details, see the `benches/bench.rs` file).
 
 To run all benchmarks (note that this process is very slow, it takes around 30 minutes):
 
 ```
   make bench-all
 ```
+
+This command will execute client query benchmarks and Database generation benchmarks for 16, 17, 18, 19 and 20 Number of DB items (log(m)). The results of these benchmarks can be found on Table 6 of our paper.
+In order to see the results of the benchmarks, navigate to the `benchmarks-x.txt` file.
+To interpret it in regards to Table 6 of our paper: `client query prepare` corresponds to the `Client query` row, `server response compute` corresponds to the `Server response` row, `client parse server response` corresponds to the `Client output` row, `generate db and params, corresponds to the `Database preprocessing` row, `derive LHS from seed` corresponds to the `Client derive matrix`, and `create client query params` corresponds to `Client query preprocessing` row.
+
 
 If all benches build and run correctly, you should see an `Finished ... benchmarks` next to them.
 We use [Criterion](https://bheisler.github.io/criterion.rs/book/index.html) for benchmarking.
