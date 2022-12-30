@@ -52,11 +52,7 @@ impl Database {
   }
 
   pub fn vec_mult(&self, row: &[u32], col_idx: usize) -> u32 {
-    let mut acc = 0u32;
-    for (i, entry) in row.iter().enumerate() {
-      acc = acc.wrapping_add(entry.wrapping_mul(self.entries[col_idx][i]));
-    }
-    acc
+    vec_mult_u32_u32(row, &self.entries[col_idx]).unwrap()
   }
 
   pub fn write_to_file(&self, path: &str) -> ResultBoxedError<()> {
@@ -72,7 +68,7 @@ impl Database {
   /// Returns the ith DB entry as a base64-encoded string
   pub fn get_db_entry(&self, i: usize) -> String {
     base64_from_u32_slice(
-      &swap_matrix_fmt(&self.entries)[i],
+      &get_matrix_second_at(&self.entries, i),
       self.plaintext_bits,
       self.ele_size,
     )
@@ -89,7 +85,7 @@ impl Database {
 
   /// Returns the width of the DB matrix
   pub fn get_matrix_width_self(&self) -> usize {
-    Database::get_matrix_width(self.get_ele_size(), self.get_plaintext_bits())
+    Database::get_matrix_width(self.ele_size, self.plaintext_bits)
   }
 
   /// Get the matrix size
@@ -147,15 +143,9 @@ impl BaseParams {
     m: usize,
   ) -> Vec<Vec<u32>> {
     let lhs = swap_matrix_fmt(&get_lwe_matrix_from_seed(lhs_seed, dim, m));
-    (0..Database::get_matrix_width(db.ele_size, db.plaintext_bits))
+    (0..db.get_matrix_width_self())
       .into_iter()
-      .map(|i| {
-        let mut col = Vec::with_capacity(m);
-        for r in &lhs {
-          col.push(db.vec_mult(r, i));
-        }
-        col
-      })
+      .map(|i| lhs.iter().map(|r| db.vec_mult(r, i)).collect())
       .collect()
   }
 
@@ -170,10 +160,9 @@ impl BaseParams {
 
   /// Computes s*(A*DB) using the RHS of the public parameters
   pub fn mult_right(&self, s: &[u32]) -> ResultBoxedError<Vec<u32>> {
-    let cols = &self.rhs;
-    (0..cols.len())
-      .into_iter()
-      .map(|i| vec_mult_u32_u32(s, &cols[i]))
+    self.rhs
+      .iter()
+      .map(|i| vec_mult_u32_u32(s, i))
       .collect()
   }
 
@@ -207,11 +196,10 @@ impl CommonParams {
   /// Computes s*A + e using the seed used to generate the LHS matrix of
   /// the public parameters
   pub fn mult_left(&self, s: &[u32]) -> ResultBoxedError<Vec<u32>> {
-    let cols = self.as_matrix();
-    (0..cols.len())
-      .into_iter()
+    self.0
+      .iter()
       .map(|i| {
-        let s_a = vec_mult_u32_u32(s, &cols[i])?;
+        let s_a = vec_mult_u32_u32(s, i)?;
         let e = random_ternary();
         Ok(s_a.wrapping_add(e))
       })
@@ -235,24 +223,17 @@ fn construct_rows(
   plaintext_bits: usize,
 ) -> ResultBoxedError<Vec<Vec<u32>>> {
   let row_width = Database::get_matrix_width(ele_size, plaintext_bits);
-
-  let result = (0..m).into_iter().map(|i| -> ResultBoxedError<Vec<u32>> {
-    let mut row = Vec::with_capacity(row_width);
-    let data = &elements[i];
-    let bytes = base64::decode(&data)?;
-    let bits = bytes_to_bits_le(&bytes);
-    for i in 0..row_width {
-      let end_bound = (i + 1) * plaintext_bits;
-      if end_bound < bits.len() {
-        row.push(bits_to_u32_le(&bits[i * plaintext_bits..end_bound])?);
-      } else {
-        row.push(bits_to_u32_le(&bits[i * plaintext_bits..])?);
-      }
-    }
-    Ok(row)
-  });
-
-  result.collect()
+  elements.iter()
+    .take(m)
+    .map(|data| {
+      let bytes = base64::decode(&data)?;
+      let bits = bytes_to_bits_le(&bytes);
+      bits.chunks(plaintext_bits)
+        .take(row_width)
+        .map(|bitspl| bits_to_u32_le(bitspl).map_err(Into::into))
+        .collect::<ResultBoxedError<Vec<u32>>>()
+    })
+    .collect()
 }
 
 fn generate_seed() -> [u8; 32] {

@@ -2,7 +2,7 @@
 name = "frodo-pir"
 version = "0.0.1"
 authors = ["Alex Davidson <coela@alxdavids.xyz>", "gpestana <g6pestana@gmail.com>", "Sofía Celi <cherenkov@riseup.net>"]
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

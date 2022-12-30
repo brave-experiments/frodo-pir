@@ -154,13 +154,10 @@ fn _bench_client_query(
 mod bench_utils {
   use rand_core::{OsRng, RngCore};
   pub fn generate_db_eles(num_eles: usize, ele_byte_len: usize) -> Vec<String> {
-    let mut eles = Vec::with_capacity(num_eles);
-    for _ in 0..num_eles {
+    (0..num_eles).map(|_| {
       let mut ele = vec![0u8; ele_byte_len];
       OsRng.fill_bytes(&mut ele);
-      let ele_str = base64::encode(ele);
-      eles.push(ele_str);
-    }
-    eles
+      base64::encode(ele)
+    }).collect()
   }
 }
