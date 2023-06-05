@@ -66,7 +66,6 @@ impl Shard {
   pub fn respond(&self, q: &Query) -> ResultBoxedError<Vec<u8>> {
     let resp = Response(
       (0..self.db.get_matrix_width_self())
-        .into_iter()
         .map(|i| self.db.vec_mult(q.as_slice(), i))
         .collect(),
     );
@@ -87,7 +86,6 @@ impl Shard {
 
   pub fn into_row_iter(&self) -> std::vec::IntoIter<std::string::String> {
     (0..self.get_db().get_matrix_height())
-      .into_iter()
       .map(|i| self.get_db().get_db_entry(i))
       .collect::<Vec<String>>()
       .into_iter()
@@ -163,7 +161,6 @@ impl Response {
 
     // perform division and rounding
     (0..Database::get_matrix_width(qp.ele_size, qp.plaintext_bits))
-      .into_iter()
       .map(|i| {
         let unscaled_res = self.0[i].wrapping_sub(qp.rhs[i]);
         let scaled_res = unscaled_res / rounding_factor;

@@ -148,7 +148,6 @@ impl BaseParams {
   ) -> Vec<Vec<u32>> {
     let lhs = swap_matrix_fmt(&get_lwe_matrix_from_seed(lhs_seed, dim, m));
     (0..Database::get_matrix_width(db.ele_size, db.plaintext_bits))
-      .into_iter()
       .map(|i| {
         let mut col = Vec::with_capacity(m);
         for r in &lhs {
@@ -172,7 +171,6 @@ impl BaseParams {
   pub fn mult_right(&self, s: &[u32]) -> ResultBoxedError<Vec<u32>> {
     let cols = &self.rhs;
     (0..cols.len())
-      .into_iter()
       .map(|i| vec_mult_u32_u32(s, &cols[i]))
       .collect()
   }
@@ -209,7 +207,6 @@ impl CommonParams {
   pub fn mult_left(&self, s: &[u32]) -> ResultBoxedError<Vec<u32>> {
     let cols = self.as_matrix();
     (0..cols.len())
-      .into_iter()
       .map(|i| {
         let s_a = vec_mult_u32_u32(s, &cols[i])?;
         let e = random_ternary();
@@ -236,7 +233,7 @@ fn construct_rows(
 ) -> ResultBoxedError<Vec<Vec<u32>>> {
   let row_width = Database::get_matrix_width(ele_size, plaintext_bits);
 
-  let result = (0..m).into_iter().map(|i| -> ResultBoxedError<Vec<u32>> {
+  let result = (0..m).map(|i| -> ResultBoxedError<Vec<u32>> {
     let mut row = Vec::with_capacity(row_width);
     let data = &elements[i];
     let bytes = base64::decode(&data)?;
