@@ -22,7 +22,7 @@ clap = "2.34.0"
 bincode = "1.3.3"
 
 [dev-dependencies]
-criterion = "0.3.1"
+criterion = "0.5.1"
 pi-rs-cli-utils = {path = "./pi-rs-cli-utils"}
 
 [[bench]]
