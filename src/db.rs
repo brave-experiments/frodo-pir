@@ -236,7 +236,7 @@ fn construct_rows(
   let result = (0..m).map(|i| -> ResultBoxedError<Vec<u32>> {
     let mut row = Vec::with_capacity(row_width);
     let data = &elements[i];
-    let bytes = base64::decode(&data)?;
+    let bytes = base64::decode(data)?;
     let bits = bytes_to_bits_le(&bytes);
     for i in 0..row_width {
       let end_bound = (i + 1) * plaintext_bits;
