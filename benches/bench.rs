@@ -8,7 +8,7 @@ const BENCH_DB_GEN: bool = true;
 
 fn criterion_benchmark(c: &mut Criterion) {
   let CLIFlags {
-    m,
+    matrix_height,
     lwe_dim,
     ele_size,
     plaintext_bits,
@@ -17,9 +17,9 @@ fn criterion_benchmark(c: &mut Criterion) {
   let mut lwe_group = c.benchmark_group("lwe");
 
   println!("Setting up DB for benchmarking. This might take a while...");
-  let db_eles = bench_utils::generate_db_eles(m, (ele_size + 7) / 8);
+  let db_eles = bench_utils::generate_db_eles(matrix_height, (ele_size + 7) / 8);
   let shard =
-    Shard::from_base64_strings(&db_eles, lwe_dim, m, ele_size, plaintext_bits)
+    Shard::from_base64_strings(&db_eles, lwe_dim, matrix_height, ele_size, plaintext_bits)
       .unwrap();
   println!("Setup complete, starting benchmarks");
   if BENCH_ONLINE {
