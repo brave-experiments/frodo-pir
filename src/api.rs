@@ -248,6 +248,7 @@ mod tests {
     let cp = CommonParams::from(bp);
 
     let mut qp = QueryParams::new(&cp, bp).unwrap();
+
     // should be successful in generating a query
     let res_unused = qp.generate_query(0);
     assert!(res_unused.is_ok());

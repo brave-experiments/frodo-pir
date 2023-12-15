@@ -161,14 +161,14 @@ In order to run this example, one can run the tests.
     // The number of rows in the database
     let m = 2u32.pow(16) as usize;
     // The length of each element in the database
-    let ele_size = 2u32.pow(13) as usize;
+    let elem_size = 2u32.pow(13) as usize;
     // The number of plaintext bits to use in each matrix element
     //   - 10 bits, for 16 ≤ log2(m) ≤ 18
     //   - 9 bits, for log2(m) ≤ 20
     // see Section 5 of paper for full details
     let plaintext_bits = 10usize;
     // Generates a random database
-    let db_eles = generate_db_eles(m, (ele_size + 7) / 8);
+    let db_eles = generate_db_elems(m, (ele_size + 7) / 8);
     let db = Shard::from_base64_strings(&db_eles, lwe_dim, m, ele_size, plaintext_bits);
     // Parameters used by the server
     let base_params = db.get_base_params();
@@ -179,9 +179,9 @@ In order to run this example, one can run the tests.
     /* Run client queries */
     for i in 0..10 {
       // Preprocess client queries before knowing query index (can be done offline)
-      let mut query_params = QueryParams::new(&common_params, base_params);
+      let mut query_params = QueryParams::new(&common_params, base_params).unwrap();
       // Generate client query for index `i` of database
-      let query = query_params.prepare_query(i);
+      let query = query_params.generate_query(i).unwrap();
       // Server response to query
       let d_resp = db.respond(&query).unwrap();
       // Client post-processing of server response
