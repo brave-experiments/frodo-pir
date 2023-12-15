@@ -44,6 +44,12 @@ pub mod matrices {
     swapped_row
   }
 
+  /// Takes a matrix and returns the [*][i] elements
+  /// equivalent to `swap_matrix_fmt(xys)[i]`, but much faster
+  pub fn get_matrix_second_at(matrix: &[Vec<u32>], secidx: usize) -> Vec<u32> {
+    matrix.iter().map(|y| y[secidx]).collect()
+  }
+
   /// Generates an LWE matrix from a public seed
   /// This corresponds to the generation of `A` in the paper.
   pub fn generate_lwe_matrix_from_seed(
@@ -68,7 +74,7 @@ pub mod matrices {
     if row.len() != col.len() {
       //panic!("row_len: {}, col_len: {}", row.len(), col.len());
 
-      return Err(Box::new(ErrorUnexpectedInputSize::new(&format!(
+      return Err(Box::new(ErrorUnexpectedInputSize::new(format!(
         "row_len: {}, col_len:{},",
         row.len(),
         col.len(),
@@ -182,7 +188,7 @@ pub mod format {
     let u32_len = std::mem::size_of::<u32>();
     let byte_len = bytes.len();
     if byte_len > u32_len {
-      return Err(ErrorUnexpectedInputSize::new(&format!(
+      return Err(ErrorUnexpectedInputSize::new(format!(
         "bytes are too long to parse as u16, length: {}",
         byte_len
       )));
@@ -199,7 +205,7 @@ pub mod format {
     let sized_vec: [u8; 4] = match bytes.try_into() {
       Ok(b) => b,
       Err(e) => {
-        return Err(ErrorUnexpectedInputSize::new(&format!(
+        return Err(ErrorUnexpectedInputSize::new(format!(
           "Unexpected vector size: {:?}",
           e,
         )))

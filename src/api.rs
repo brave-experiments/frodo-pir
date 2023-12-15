@@ -65,14 +65,15 @@ impl Shard {
   // Produces a serialized response (base64-encoded) to a serialized
   // client query: c' = b' * DB
   pub fn respond(&self, q: &Query) -> ResultBoxedError<Vec<u8>> {
+    let q = q.as_slice();
     let resp = Response(
       (0..self.db.get_matrix_width_self())
-        .map(|i| self.db.vec_mult(q.as_slice(), i))
+        .map(|i| self.db.vec_mult(q, i))
         .collect(),
     );
-    let se = bincode::serialize(&resp);
+    let ser = bincode::serialize(&resp);
 
-    Ok(se?)
+    Ok(ser?)
   }
 
   /// Returns the database

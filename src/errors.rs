@@ -13,10 +13,8 @@ pub struct ErrorUnexpectedInputSize {
 }
 
 impl ErrorUnexpectedInputSize {
-  pub fn new(msg: &str) -> Self {
-    Self {
-      details: msg.to_string(),
-    }
+  pub fn new(details: String) -> Self {
+    Self { details }
   }
 }
 
@@ -35,7 +33,8 @@ impl Error for ErrorUnexpectedInputSize {
 // ErrorQueryParamsReused blocks attempts to reuse query parameters that
 // were used already.
 #[derive(Debug)]
-pub struct ErrorQueryParamsReused {}
+pub struct ErrorQueryParamsReused;
+
 impl Display for ErrorQueryParamsReused {
   fn fmt(&self, f: &mut Formatter) -> FmtResult {
     write!(
@@ -44,22 +43,15 @@ impl Display for ErrorQueryParamsReused {
     )
   }
 }
-impl Error for ErrorQueryParamsReused {
-  fn description(&self) -> &str {
-    ""
-  }
-}
+impl Error for ErrorQueryParamsReused {}
 
 // ErrorOverflownAdd blocks attempts to overflown addition.
 #[derive(Debug)]
-pub struct ErrorOverflownAdd {}
+pub struct ErrorOverflownAdd;
+
 impl Display for ErrorOverflownAdd {
   fn fmt(&self, f: &mut Formatter) -> FmtResult {
     write!(f, "Attempted to overflow addition")
   }
 }
-impl Error for ErrorOverflownAdd {
-  fn description(&self) -> &str {
-    ""
-  }
-}
+impl Error for ErrorOverflownAdd {}

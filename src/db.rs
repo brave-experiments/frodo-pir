@@ -53,11 +53,7 @@ impl Database {
   }
 
   pub fn vec_mult(&self, row: &[u32], col_idx: usize) -> u32 {
-    let mut acc = 0u32;
-    for (i, entry) in row.iter().enumerate() {
-      acc = acc.wrapping_add(entry.wrapping_mul(self.entries[col_idx][i]));
-    }
-    acc
+    vec_mult_u32_u32(row, &self.entries[col_idx]).unwrap()
   }
 
   pub fn write_to_file(&self, path: &str) -> ResultBoxedError<()> {
@@ -73,7 +69,7 @@ impl Database {
   /// Returns the ith DB entry as a base64-encoded string
   pub fn get_db_entry(&self, i: usize) -> String {
     base64_from_u32_slice(
-      &swap_matrix_fmt(&self.entries)[i],
+      &get_matrix_second_at(&self.entries, i),
       self.plaintext_bits,
       self.elem_size,
     )
@@ -152,7 +148,7 @@ impl BaseParams {
   ) -> Vec<Vec<u32>> {
     let lhs =
       swap_matrix_fmt(&generate_lwe_matrix_from_seed(public_seed, dim, m));
-    (0..Database::get_matrix_width(db.elem_size, db.plaintext_bits))
+    (0..db.get_matrix_width_self())
       .map(|i| {
         let mut col = Vec::with_capacity(m);
         for r in &lhs {
