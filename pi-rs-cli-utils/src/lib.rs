@@ -1,4 +1,4 @@
-use clap::{Parser, arg};
+use clap::{arg, Parser};
 use std::env;
 use std::num::ParseIntError;
 
@@ -16,24 +16,26 @@ pub struct CLIFlags {
   pub plaintext_bits: usize,
   /// Log2 of element bit length
   #[arg(short, long, default_value_t = 13, value_parser = parse_exp_to_usize)]
-  pub ele_size: usize,
+  pub elem_size: usize,
 }
 
 pub fn parse_cli_flags() -> CLIFlags {
-    CLIFlags::parse()
+  CLIFlags::parse()
 }
 
 pub fn parse_from_env() -> CLIFlags {
-  let ele_size = parse_exp_to_usize(&env::var("PIR_ELE_SIZE_EXP").unwrap()).unwrap();
+  let elem_size =
+    parse_exp_to_usize(&env::var("PIR_ELEM_SIZE_EXP").unwrap()).unwrap();
   let lwe_dim: usize = env::var("PIR_LWE_DIM").unwrap().parse().unwrap();
   let plaintext_bits: usize =
     env::var("PIR_PLAINTEXT_BITS").unwrap().parse().unwrap();
-  let matrix_height = parse_exp_to_usize(&env::var("PIR_MATRIX_HEIGHT_EXP").unwrap()).unwrap();
+  let matrix_height =
+    parse_exp_to_usize(&env::var("PIR_MATRIX_HEIGHT_EXP").unwrap()).unwrap();
   CLIFlags {
     matrix_height,
     lwe_dim,
     plaintext_bits,
-    ele_size,
+    elem_size,
   }
 }
 

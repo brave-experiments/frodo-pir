@@ -18,6 +18,7 @@ pub struct Shard {
   db: Database,
   base_params: BaseParams,
 }
+
 impl Shard {
   /// Expects a JSON file of base64-encoded strings in file path. It also
   /// expects the lwe dimension, m (the number of DB elements), element size
@@ -27,13 +28,13 @@ impl Shard {
     file_path: &str,
     lwe_dim: usize,
     m: usize,
-    ele_size: usize,
+    elem_size: usize,
     plaintext_bits: usize,
   ) -> ResultBoxedError<Self> {
     let file_contents: String =
       fs::read_to_string(file_path).unwrap().parse().unwrap();
     let elements: Vec<String> = serde_json::from_str(&file_contents).unwrap();
-    Shard::from_base64_strings(&elements, lwe_dim, m, ele_size, plaintext_bits)
+    Shard::from_base64_strings(&elements, lwe_dim, m, elem_size, plaintext_bits)
   }
 
   /// Expects an array of base64-encoded strings and converts into a
@@ -42,10 +43,10 @@ impl Shard {
     base64_strs: &[String],
     lwe_dim: usize,
     m: usize,
-    ele_size: usize,
+    elem_size: usize,
     plaintext_bits: usize,
   ) -> ResultBoxedError<Self> {
-    let db = Database::new(base64_strs, m, ele_size, plaintext_bits)?;
+    let db = Database::new(base64_strs, m, elem_size, plaintext_bits)?;
     let base_params = BaseParams::new(&db, lwe_dim);
     Ok(Self { db, base_params })
   }
@@ -62,7 +63,7 @@ impl Shard {
   }
 
   // Produces a serialized response (base64-encoded) to a serialized
-  // client query
+  // client query: c' = b' * DB
   pub fn respond(&self, q: &Query) -> ResultBoxedError<Vec<u8>> {
     let resp = Response(
       (0..self.db.get_matrix_width_self())
@@ -98,24 +99,28 @@ impl Shard {
 pub struct QueryParams {
   lhs: Vec<u32>,
   rhs: Vec<u32>,
-  ele_size: usize,
+  elem_size: usize,
   plaintext_bits: usize,
   pub used: bool,
 }
+
 impl QueryParams {
   pub fn new(cp: &CommonParams, bp: &BaseParams) -> ResultBoxedError<Self> {
-    let s = random_ternary_vector(bp.get_dim());
+    let s = random_ternary_vector(bp.get_dim()); // The `s` value for the client as in the paper
     Ok(Self {
-      lhs: cp.mult_left(&s)?,
-      rhs: bp.mult_right(&s)?,
-      ele_size: bp.get_ele_size(),
+      lhs: cp.mult_left(&s)?,  // The `b` value
+      rhs: bp.mult_right(&s)?, // The `c` value
+      elem_size: bp.get_elem_size(),
       plaintext_bits: bp.get_plaintext_bits(),
       used: false,
     })
   }
 
   /// Prepares a new client query based on an input row_index
-  pub fn prepare_query(&mut self, row_index: usize) -> ResultBoxedError<Query> {
+  pub fn generate_query(
+    &mut self,
+    row_index: usize,
+  ) -> ResultBoxedError<Query> {
     if self.used {
       return Err(Box::new(ErrorQueryParamsReused {}));
     }
@@ -160,7 +165,7 @@ impl Response {
     let plaintext_size = get_plaintext_size(qp.plaintext_bits);
 
     // perform division and rounding
-    (0..Database::get_matrix_width(qp.ele_size, qp.plaintext_bits))
+    (0..Database::get_matrix_width(qp.elem_size, qp.plaintext_bits))
       .map(|i| {
         let unscaled_res = self.0[i].wrapping_sub(qp.rhs[i]);
         let scaled_res = unscaled_res / rounding_factor;
@@ -177,13 +182,13 @@ impl Response {
   /// Parses the output as bytes
   pub fn parse_output_as_bytes(&self, qp: &QueryParams) -> Vec<u8> {
     let row = self.parse_output_as_row(qp);
-    bytes_from_u32_slice(&row, qp.plaintext_bits, qp.ele_size)
+    bytes_from_u32_slice(&row, qp.plaintext_bits, qp.elem_size)
   }
 
   /// Parses the output as a base64-encoded string
   pub fn parse_output_as_base64(&self, qp: &QueryParams) -> String {
     let row = self.parse_output_as_row(qp);
-    base64_from_u32_slice(&row, qp.plaintext_bits, qp.ele_size)
+    base64_from_u32_slice(&row, qp.plaintext_bits, qp.elem_size)
   }
 }
 
@@ -195,69 +200,75 @@ mod tests {
   #[test]
   fn client_query_to_server_10_times() {
     let m = 2u32.pow(12) as usize;
-    let ele_size = 2u32.pow(8) as usize;
+    let elem_size = 2u32.pow(8) as usize;
     let plaintext_bits = 12usize;
     let lwe_dim = 512;
-    let db_eles = generate_db_eles(m, (ele_size + 7) / 8);
+    let db_elems = generate_db_elems(m, (elem_size + 7) / 8);
     let shard = Shard::from_base64_strings(
-      &db_eles,
+      &db_elems,
       lwe_dim,
       m,
-      ele_size,
+      elem_size,
       plaintext_bits,
     )
     .unwrap();
+
     let bp = shard.get_base_params();
     let cp = CommonParams::from(bp);
+
     #[allow(clippy::needless_range_loop)]
     for i in 0..10 {
       let mut qp = QueryParams::new(&cp, bp).unwrap();
-      let q = qp.prepare_query(i).unwrap();
+      let q = qp.generate_query(i).unwrap();
+
       let d_resp = shard.respond(&q).unwrap();
       let resp: Response = bincode::deserialize(&d_resp).unwrap();
+
       let output = resp.parse_output_as_base64(&qp);
-      assert_eq!(output, db_eles[i]);
+      assert_eq!(output, db_elems[i]);
     }
   }
 
   #[test]
   fn client_query_to_server_attempt_params_reuse() {
     let m = 2u32.pow(6) as usize;
-    let ele_size = 2u32.pow(8) as usize;
+    let elem_size = 2u32.pow(8) as usize;
     let plaintext_bits = 10usize;
     let lwe_dim = 512;
-    let db_eles = generate_db_eles(m, (ele_size + 7) / 8);
+    let db_elems = generate_db_elems(m, (elem_size + 7) / 8);
     let shard = Shard::from_base64_strings(
-      &db_eles,
+      &db_elems,
       lwe_dim,
       m,
-      ele_size,
+      elem_size,
       plaintext_bits,
     )
     .unwrap();
     let bp = shard.get_base_params();
     let cp = CommonParams::from(bp);
+
     let mut qp = QueryParams::new(&cp, bp).unwrap();
     // should be successful in generating a query
-    let res_unused = qp.prepare_query(0);
+    let res_unused = qp.generate_query(0);
     assert!(res_unused.is_ok());
 
     // should be "used"
     assert!(qp.used);
 
     // should be successful in generating a query
-    let res = qp.prepare_query(0);
+    let res = qp.generate_query(0);
     assert!(res.is_err());
   }
 
-  fn generate_db_eles(num_eles: usize, ele_byte_len: usize) -> Vec<String> {
-    let mut eles = Vec::with_capacity(num_eles);
-    for _ in 0..num_eles {
-      let mut ele = vec![0u8; ele_byte_len];
-      OsRng.fill_bytes(&mut ele);
-      let ele_str = base64::encode(ele);
-      eles.push(ele_str);
+  // This will generate random elements for test databases
+  fn generate_db_elems(num_elems: usize, elem_byte_len: usize) -> Vec<String> {
+    let mut elems = Vec::with_capacity(num_elems);
+    for _ in 0..num_elems {
+      let mut elem = vec![0u8; elem_byte_len];
+      OsRng.fill_bytes(&mut elem);
+      let elem_str = base64::encode(elem);
+      elems.push(elem_str);
     }
-    eles
+    elems
   }
 }

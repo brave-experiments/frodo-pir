@@ -44,22 +44,23 @@ pub mod matrices {
     swapped_row
   }
 
-  /// Generates an LWE matrix from a seed
-  pub fn get_lwe_matrix_from_seed(
+  /// Generates an LWE matrix from a public seed
+  /// This corresponds to the generation of `A` in the paper.
+  pub fn generate_lwe_matrix_from_seed(
     seed: [u8; 32],
     lwe_dim: usize,
     width: usize,
   ) -> Vec<Vec<u32>> {
-    let mut lhs = Vec::with_capacity(width);
+    let mut a = Vec::with_capacity(width);
     let mut rng = get_seeded_rng(seed);
     for _ in 0..width {
       let mut v = Vec::with_capacity(lwe_dim);
       for _ in 0..lwe_dim {
         v.push(rng.next_u32());
       }
-      lhs.push(v);
+      a.push(v);
     }
-    lhs
+    a
   }
 
   /// Multiplies a u32 vector with a u32 column vector
