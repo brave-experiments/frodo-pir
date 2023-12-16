@@ -10,17 +10,23 @@ fn criterion_benchmark(c: &mut Criterion) {
   let CLIFlags {
     matrix_height,
     lwe_dim,
-    ele_size,
+    elem_size,
     plaintext_bits,
     ..
   } = parse_from_env();
   let mut lwe_group = c.benchmark_group("lwe");
 
   println!("Setting up DB for benchmarking. This might take a while...");
-  let db_eles = bench_utils::generate_db_eles(matrix_height, (ele_size + 7) / 8);
-  let shard =
-    Shard::from_base64_strings(&db_eles, lwe_dim, matrix_height, ele_size, plaintext_bits)
-      .unwrap();
+  let db_eles =
+    bench_utils::generate_db_eles(matrix_height, (elem_size + 7) / 8);
+  let shard = Shard::from_base64_strings(
+    &db_eles,
+    lwe_dim,
+    matrix_height,
+    elem_size,
+    plaintext_bits,
+  )
+  .unwrap();
   println!("Setup complete, starting benchmarks");
   if BENCH_ONLINE {
     _bench_client_query(&mut lwe_group, &shard);
@@ -69,7 +75,7 @@ fn _bench_db_generation(
           db_eles,
           bp.get_dim(),
           db.get_matrix_height(),
-          db.get_ele_size(),
+          db.get_elem_size(),
           db.get_plaintext_bits(),
         )
         .unwrap();
@@ -91,7 +97,7 @@ fn _bench_client_query(
 
   println!("Starting client query benchmarks");
   let mut _qp = QueryParams::new(&cp, bp).unwrap();
-  let _q = _qp.prepare_query(idx).unwrap();
+  let _q = _qp.generate_query(idx).unwrap();
   let mut _resp = shard.respond(&_q).unwrap();
   c.bench_function(
     format!(
@@ -115,7 +121,7 @@ fn _bench_client_query(
     |b| {
       b.iter(|| {
         _qp.used = false;
-        _qp.prepare_query(idx).unwrap();
+        _qp.generate_query(idx).unwrap();
       });
     },
   );

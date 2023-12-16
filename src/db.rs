@@ -13,25 +13,26 @@ use crate::utils::matrices::*;
 pub struct Database {
   entries: Vec<Vec<u32>>,
   m: usize,
-  ele_size: usize,
+  elem_size: usize,
   plaintext_bits: usize,
 }
+
 impl Database {
   pub fn new(
     elements: &[String],
     m: usize,
-    ele_size: usize,
+    elem_size: usize,
     plaintext_bits: usize,
   ) -> ResultBoxedError<Self> {
     Ok(Self {
       entries: swap_matrix_fmt(&construct_rows(
         elements,
         m,
-        ele_size,
+        elem_size,
         plaintext_bits,
       )?),
       m,
-      ele_size,
+      elem_size,
       plaintext_bits,
     })
   }
@@ -39,12 +40,12 @@ impl Database {
   pub fn from_file(
     db_file: &str,
     m: usize,
-    ele_size: usize,
+    elem_size: usize,
     plaintext_bits: usize,
   ) -> ResultBoxedError<Self> {
     let file_contents: String = fs::read_to_string(db_file)?.parse()?;
     let elements: Vec<String> = serde_json::from_str(&file_contents)?;
-    Self::new(&elements, m, ele_size, plaintext_bits)
+    Self::new(&elements, m, elem_size, plaintext_bits)
   }
 
   pub fn switch_fmt(&mut self) {
@@ -52,11 +53,7 @@ impl Database {
   }
 
   pub fn vec_mult(&self, row: &[u32], col_idx: usize) -> u32 {
-    let mut acc = 0u32;
-    for (i, entry) in row.iter().enumerate() {
-      acc = acc.wrapping_add(entry.wrapping_mul(self.entries[col_idx][i]));
-    }
-    acc
+    vec_mult_u32_u32(row, &self.entries[col_idx]).unwrap()
   }
 
   pub fn write_to_file(&self, path: &str) -> ResultBoxedError<()> {
@@ -72,9 +69,9 @@ impl Database {
   /// Returns the ith DB entry as a base64-encoded string
   pub fn get_db_entry(&self, i: usize) -> String {
     base64_from_u32_slice(
-      &swap_matrix_fmt(&self.entries)[i],
+      &get_matrix_second_at(&self.entries, i),
       self.plaintext_bits,
-      self.ele_size,
+      self.elem_size,
     )
   }
 
@@ -89,7 +86,7 @@ impl Database {
 
   /// Returns the width of the DB matrix
   pub fn get_matrix_width_self(&self) -> usize {
-    Database::get_matrix_width(self.get_ele_size(), self.get_plaintext_bits())
+    Database::get_matrix_width(self.get_elem_size(), self.get_plaintext_bits())
   }
 
   /// Get the matrix size
@@ -98,8 +95,8 @@ impl Database {
   }
 
   /// Get the element size
-  pub fn get_ele_size(&self) -> usize {
-    self.ele_size
+  pub fn get_elem_size(&self) -> usize {
+    self.elem_size
   }
 
   /// Get the plaintext bits
@@ -112,22 +109,25 @@ impl Database {
 /// are used by the client for constructing queries
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct BaseParams {
-  dim: usize,
-  m: usize,
-  lhs_seed: [u8; 32],
-  rhs: Vec<Vec<u32>>,
-  ele_size: usize,
+  dim: usize, // the lwe dimension
+
+  m: usize,         // the size of the DB
+  elem_size: usize, // the size (in bits) of each element of the DB. Corresponds to `w` in paper.
   plaintext_bits: usize,
+
+  public_seed: [u8; 32],
+  rhs: Vec<Vec<u32>>,
 }
+
 impl BaseParams {
   pub fn new(db: &Database, dim: usize) -> Self {
-    let lhs_seed = generate_seed();
+    let public_seed = generate_seed(); // generates the public seed
     Self {
-      lhs_seed,
-      rhs: Self::generate_params_rhs(db, lhs_seed, dim, db.m),
+      public_seed,
+      rhs: Self::generate_params_rhs(db, public_seed, dim, db.m),
       dim,
       m: db.m,
-      ele_size: db.ele_size,
+      elem_size: db.elem_size,
       plaintext_bits: db.plaintext_bits,
     }
   }
@@ -142,12 +142,13 @@ impl BaseParams {
   /// for the LHS
   pub fn generate_params_rhs(
     db: &Database,
-    lhs_seed: [u8; 32],
+    public_seed: [u8; 32],
     dim: usize,
     m: usize,
   ) -> Vec<Vec<u32>> {
-    let lhs = swap_matrix_fmt(&get_lwe_matrix_from_seed(lhs_seed, dim, m));
-    (0..Database::get_matrix_width(db.ele_size, db.plaintext_bits))
+    let lhs =
+      swap_matrix_fmt(&generate_lwe_matrix_from_seed(public_seed, dim, m));
+    (0..db.get_matrix_width_self())
       .map(|i| {
         let mut col = Vec::with_capacity(m);
         for r in &lhs {
@@ -161,13 +162,13 @@ impl BaseParams {
   /// Writes the params struct as JSON to file
   pub fn write_to_file(&self, path: &str) -> ResultBoxedError<()> {
     let json = json!({
-      "lhs_seed": self.lhs_seed,
+      "public_seed": self.public_seed,
       "rhs": self.rhs,
     });
     Ok(serde_json::to_writer(&fs::File::create(path)?, &json)?)
   }
 
-  /// Computes s*(A*DB) using the RHS of the public parameters
+  /// Computes c = s*(A*DB) using the RHS of the public parameters
   pub fn mult_right(&self, s: &[u32]) -> ResultBoxedError<Vec<u32>> {
     let cols = &self.rhs;
     (0..cols.len())
@@ -183,8 +184,8 @@ impl BaseParams {
     self.dim
   }
 
-  pub fn get_ele_size(&self) -> usize {
-    self.ele_size
+  pub fn get_elem_size(&self) -> usize {
+    self.elem_size
   }
 
   pub fn get_plaintext_bits(&self) -> usize {
@@ -193,7 +194,7 @@ impl BaseParams {
 }
 
 /// `CommonParams` holds the derived uniform matrix that is used for
-/// constructing server public parameters and the client query.
+/// constructing the server's public parameters and the client query.
 #[derive(Serialize, Deserialize)]
 pub struct CommonParams(Vec<Vec<u32>>);
 impl CommonParams {
@@ -202,7 +203,7 @@ impl CommonParams {
     &self.0
   }
 
-  /// Computes s*A + e using the seed used to generate the LHS matrix of
+  /// Computes b = s*A + e using the seed used to generate the matrix of
   /// the public parameters
   pub fn mult_left(&self, s: &[u32]) -> ResultBoxedError<Vec<u32>> {
     let cols = self.as_matrix();
@@ -217,8 +218,8 @@ impl CommonParams {
 }
 impl From<&BaseParams> for CommonParams {
   fn from(params: &BaseParams) -> Self {
-    Self(get_lwe_matrix_from_seed(
-      params.lhs_seed,
+    Self(generate_lwe_matrix_from_seed(
+      params.public_seed,
       params.dim,
       params.m,
     ))
@@ -228,10 +229,10 @@ impl From<&BaseParams> for CommonParams {
 fn construct_rows(
   elements: &[String],
   m: usize,
-  ele_size: usize,
+  elem_size: usize,
   plaintext_bits: usize,
 ) -> ResultBoxedError<Vec<Vec<u32>>> {
-  let row_width = Database::get_matrix_width(ele_size, plaintext_bits);
+  let row_width = Database::get_matrix_width(elem_size, plaintext_bits);
 
   let result = (0..m).map(|i| -> ResultBoxedError<Vec<u32>> {
     let mut row = Vec::with_capacity(row_width);

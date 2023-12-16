@@ -44,22 +44,29 @@ pub mod matrices {
     swapped_row
   }
 
-  /// Generates an LWE matrix from a seed
-  pub fn get_lwe_matrix_from_seed(
+  /// Takes a matrix and returns the [*][i] elements
+  /// equivalent to `swap_matrix_fmt(xys)[i]`, but much faster
+  pub fn get_matrix_second_at(matrix: &[Vec<u32>], secidx: usize) -> Vec<u32> {
+    matrix.iter().map(|y| y[secidx]).collect()
+  }
+
+  /// Generates an LWE matrix from a public seed
+  /// This corresponds to the generation of `A` in the paper.
+  pub fn generate_lwe_matrix_from_seed(
     seed: [u8; 32],
     lwe_dim: usize,
     width: usize,
   ) -> Vec<Vec<u32>> {
-    let mut lhs = Vec::with_capacity(width);
+    let mut a = Vec::with_capacity(width);
     let mut rng = get_seeded_rng(seed);
     for _ in 0..width {
       let mut v = Vec::with_capacity(lwe_dim);
       for _ in 0..lwe_dim {
         v.push(rng.next_u32());
       }
-      lhs.push(v);
+      a.push(v);
     }
-    lhs
+    a
   }
 
   /// Multiplies a u32 vector with a u32 column vector
@@ -67,7 +74,7 @@ pub mod matrices {
     if row.len() != col.len() {
       //panic!("row_len: {}, col_len: {}", row.len(), col.len());
 
-      return Err(Box::new(ErrorUnexpectedInputSize::new(&format!(
+      return Err(Box::new(ErrorUnexpectedInputSize::new(format!(
         "row_len: {}, col_len:{},",
         row.len(),
         col.len(),
@@ -181,7 +188,7 @@ pub mod format {
     let u32_len = std::mem::size_of::<u32>();
     let byte_len = bytes.len();
     if byte_len > u32_len {
-      return Err(ErrorUnexpectedInputSize::new(&format!(
+      return Err(ErrorUnexpectedInputSize::new(format!(
         "bytes are too long to parse as u16, length: {}",
         byte_len
       )));
@@ -198,7 +205,7 @@ pub mod format {
     let sized_vec: [u8; 4] = match bytes.try_into() {
       Ok(b) => b,
       Err(e) => {
-        return Err(ErrorUnexpectedInputSize::new(&format!(
+        return Err(ErrorUnexpectedInputSize::new(format!(
           "Unexpected vector size: {:?}",
           e,
         )))
