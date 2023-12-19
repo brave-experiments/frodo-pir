@@ -71,9 +71,7 @@ impl Shard {
         .map(|i| self.db.vec_mult(q, i))
         .collect(),
     );
-    let ser = bincode::serialize(&resp);
-
-    Ok(ser?)
+    Ok(bincode::serialize(&resp)?)
   }
 
   /// Returns the database
@@ -86,11 +84,10 @@ impl Shard {
     &self.base_params
   }
 
-  pub fn into_row_iter(&self) -> std::vec::IntoIter<std::string::String> {
-    (0..self.get_db().get_matrix_height())
-      .map(|i| self.get_db().get_db_entry(i))
-      .collect::<Vec<String>>()
-      .into_iter()
+  pub fn into_row_iter(&self) -> impl Iterator<Item = String> {
+    let db = self.get_db();
+    (0..db.get_matrix_height())
+      .map(|i| db.get_db_entry(i))
   }
 }
 
@@ -127,8 +124,7 @@ impl QueryParams {
     }
     self.used = true;
     let query_indicator = get_rounding_factor(self.plaintext_bits);
-    let mut lhs = Vec::new();
-    lhs.clone_from(&self.lhs.clone());
+    let mut lhs = self.lhs.clone();
     let (result, check) = lhs[row_index].overflowing_add(query_indicator);
     if !check {
       lhs[row_index] = result;
@@ -166,9 +162,14 @@ impl Response {
     let plaintext_size = get_plaintext_size(qp.plaintext_bits);
 
     // perform division and rounding
-    (0..Database::get_matrix_width(qp.elem_size, qp.plaintext_bits))
-      .map(|i| {
-        let unscaled_res = self.0[i].wrapping_sub(qp.rhs[i]);
+    let rg = 0..Database::get_matrix_width(qp.ele_size, qp.plaintext_bits);
+    self.0[rg.clone()]
+      .iter()
+      .copied()
+      .zip(qp.rhs[rg].iter().copied())
+      .into_iter()
+      .map(|(x, y)| x.wrapping_sub(y))
+      .map(|unscaled_res| {
         let scaled_res = unscaled_res / rounding_factor;
         let scaled_rem = unscaled_res % rounding_factor;
         let mut rounded_res = scaled_res;
@@ -264,13 +265,10 @@ mod tests {
 
   // This will generate random elements for test databases
   fn generate_db_elems(num_elems: usize, elem_byte_len: usize) -> Vec<String> {
-    let mut elems = Vec::with_capacity(num_elems);
-    for _ in 0..num_elems {
-      let mut elem = vec![0u8; elem_byte_len];
+    (0..num_eles).map(|_| {
+      let mut elem = vec![0u8; ele_byte_len];
       OsRng.fill_bytes(&mut elem);
-      let elem_str = base64::encode(elem);
-      elems.push(elem_str);
-    }
-    elems
+      base64::encode(elem)
+    }).collect()
   }
 }

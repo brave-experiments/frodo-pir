@@ -57,16 +57,11 @@ pub mod matrices {
     lwe_dim: usize,
     width: usize,
   ) -> Vec<Vec<u32>> {
-    let mut a = Vec::with_capacity(width);
+    use core::iter::repeat_with;
     let mut rng = get_seeded_rng(seed);
-    for _ in 0..width {
-      let mut v = Vec::with_capacity(lwe_dim);
-      for _ in 0..lwe_dim {
-        v.push(rng.next_u32());
-      }
-      a.push(v);
-    }
-    a
+    repeat_with(||
+      repeat_with(|| rng.next_u32()).take(lwe_dim).collect()
+    ).take(width).collect()
   }
 
   /// Multiplies a u32 vector with a u32 column vector
@@ -80,11 +75,10 @@ pub mod matrices {
         col.len(),
       ))));
     }
-    let mut acc = 0u32;
-    for i in 0..row.len() {
-      acc = acc.wrapping_add(row[i].wrapping_mul(col[i]));
-    }
-    Ok(acc)
+    Ok(row.iter()
+      .zip(col.iter())
+      .map(|(&x, &y)| x.wrapping_mul(y))
+      .fold(0u32, |acc, i| acc.wrapping_add(i)))
   }
 
   /// Returns a seeded RNG for sampling values
@@ -115,23 +109,19 @@ pub mod matrices {
     }
     // Now we return {0,1,-1} depending on whether the sampled value
     // sits in the first, second or third sampling interval
-    let mut tern = 0;
     if val > TERNARY_INTERVAL_SIZE && val <= TERNARY_INTERVAL_SIZE * 2 {
-      tern = 1;
+      1
     } else if val > TERNARY_INTERVAL_SIZE * 2 {
-      tern = u32::MAX;
+      u32::MAX
+    } else {
+      0
     }
-    tern
   }
 
   /// Simulates a ternary error vector of width size by sampling randomly,
   /// using rejection sampling, from {0,1,u32::MAX}
   pub fn random_ternary_vector(width: usize) -> Vec<u32> {
-    let mut row = Vec::new();
-    for _ in 0..width {
-      row.push(random_ternary());
-    }
-    row
+    (0..width).map(|_| random_ternary()).collect()
   }
 }
 
@@ -140,52 +130,60 @@ pub mod format {
   use crate::errors::ErrorUnexpectedInputSize;
   use std::convert::TryInto;
 
-  fn u8_to_bits_le(byte: u8) -> Vec<bool> {
-    let mut ret = Vec::new();
-    for i in 0..8 {
-      ret.push(2u8.pow(i as u32) & byte > 0);
-    }
-    ret
+  fn u8_to_bits_le(byte: u8) -> [bool; 8] {
+    [
+      2u8.pow(0) & byte != 0,
+      2u8.pow(1) & byte != 0,
+      2u8.pow(2) & byte != 0,
+      2u8.pow(3) & byte != 0,
+
+      2u8.pow(4) & byte != 0,
+      2u8.pow(5) & byte != 0,
+      2u8.pow(6) & byte != 0,
+      2u8.pow(7) & byte != 0,
+    ]
+  }
+
+  fn bits_to_u8_le(xs: &[bool]) -> u8 {
+    assert!(xs.len() <= 8);
+    xs.iter()
+      .enumerate()
+      .filter(|(_, &bit)| bit)
+      .map(|(i, _)| 2u8.pow(i as u32))
+      .sum()
   }
 
   pub fn u32_to_bits_le(x: u32, bit_len: usize) -> Vec<bool> {
-    let bytes = x.to_le_bytes();
-    let mut bits = Vec::with_capacity(bytes.len());
-    for byte in bytes {
-      bits.extend(u8_to_bits_le(byte));
-    }
-    bits[..bit_len].to_vec()
+    x.to_le_bytes()
+      .into_iter()
+      .flat_map(u8_to_bits_le)
+      .take(bit_len)
+      .collect()
   }
 
   pub fn bits_to_bytes_le(bits: &[bool]) -> Vec<u8> {
-    let mut bytes = vec![0u8; (bits.len() + 7) / 8];
-    for (i, &bit) in bits.iter().enumerate() {
-      if bit {
-        let idx = ((i as f64) / 8f64).floor() as usize;
-        let exp = (i % 8) as u32;
-        bytes[idx] += 2u8.pow(exp);
-      }
-    }
-    bytes
+    bits.chunks(8)
+      .map(|bits8| bits_to_u8_le(bits8))
+      .collect()
   }
 
   pub fn bytes_to_bits_le(bytes: &[u8]) -> Vec<bool> {
-    bytes
-      .iter()
-      .map(|b| u8_to_bits_le(*b))
-      .collect::<Vec<Vec<bool>>>()
-      .iter()
-      .fold(Vec::new(), |mut acc, next| {
-        acc.extend(next);
-        acc
-      })
+    bytes.iter()
+      .copied()
+      .flat_map(u8_to_bits_le)
+      .collect()
   }
 
   pub fn bits_to_u32_le(
     bits: &[bool],
   ) -> Result<u32, ErrorUnexpectedInputSize> {
-    let mut bytes = bits_to_bytes_le(bits);
-    let u32_len = std::mem::size_of::<u32>();
+    bytes_to_u32_le(bits_to_bytes_le(bits))
+  }
+
+  pub fn bytes_to_u32_le(
+    mut bytes: Vec<u8>,
+  ) -> Result<u32, ErrorUnexpectedInputSize> {
+    let u32_len = core::mem::size_of::<u32>();
     let byte_len = bytes.len();
     if byte_len > u32_len {
       return Err(ErrorUnexpectedInputSize::new(format!(
@@ -202,17 +200,11 @@ pub mod format {
   pub fn u32_sized_bytes_from_vec(
     bytes: Vec<u8>,
   ) -> Result<[u8; 4], ErrorUnexpectedInputSize> {
-    let sized_vec: [u8; 4] = match bytes.try_into() {
-      Ok(b) => b,
-      Err(e) => {
-        return Err(ErrorUnexpectedInputSize::new(format!(
-          "Unexpected vector size: {:?}",
-          e,
-        )))
-      }
-    };
-
-    Ok(sized_vec)
+    bytes.try_into()
+      .map_err(|e| ErrorUnexpectedInputSize::new(format!(
+        "Unexpected vector size: {:?}",
+        e,
+      )))
   }
 
   pub fn bytes_from_u32_slice(
@@ -221,16 +213,15 @@ pub mod format {
     total_bit_len: usize,
   ) -> Vec<u8> {
     let remainder = total_bit_len % entry_bit_len;
-    let mut bits = Vec::with_capacity(entry_bit_len * v.len());
-    for i in 0..v.len() {
+    let bits: Vec<_> = v.iter().enumerate().flat_map(|(i, &vi)| {
       // We extract either the full amount of bits, or the remainder from
       // the last index
-      if i != v.len() - 1 {
-        bits.extend(u32_to_bits_le(v[i], entry_bit_len));
+      u32_to_bits_le(vi, if i != v.len() - 1 {
+        entry_bit_len
       } else {
-        bits.extend(u32_to_bits_le(v[i], remainder));
-      }
-    }
+        remainder
+      })
+    }).collect();
     bits_to_bytes_le(&bits)
   }
 

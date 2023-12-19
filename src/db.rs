@@ -86,7 +86,7 @@ impl Database {
 
   /// Returns the width of the DB matrix
   pub fn get_matrix_width_self(&self) -> usize {
-    Database::get_matrix_width(self.get_elem_size(), self.get_plaintext_bits())
+    Database::get_matrix_width(self.elem_size, self.plaintext_bits)
   }
 
   /// Get the matrix size
@@ -149,13 +149,7 @@ impl BaseParams {
     let lhs =
       swap_matrix_fmt(&generate_lwe_matrix_from_seed(public_seed, dim, m));
     (0..db.get_matrix_width_self())
-      .map(|i| {
-        let mut col = Vec::with_capacity(m);
-        for r in &lhs {
-          col.push(db.vec_mult(r, i));
-        }
-        col
-      })
+      .map(|i| lhs.iter().map(|r| db.vec_mult(r, i)).collect())
       .collect()
   }
 
@@ -170,9 +164,9 @@ impl BaseParams {
 
   /// Computes c = s*(A*DB) using the RHS of the public parameters
   pub fn mult_right(&self, s: &[u32]) -> ResultBoxedError<Vec<u32>> {
-    let cols = &self.rhs;
-    (0..cols.len())
-      .map(|i| vec_mult_u32_u32(s, &cols[i]))
+    self.rhs
+      .iter()
+      .map(|i| vec_mult_u32_u32(s, i))
       .collect()
   }
 
@@ -206,10 +200,10 @@ impl CommonParams {
   /// Computes b = s*A + e using the seed used to generate the matrix of
   /// the public parameters
   pub fn mult_left(&self, s: &[u32]) -> ResultBoxedError<Vec<u32>> {
-    let cols = self.as_matrix();
-    (0..cols.len())
+    self.0
+      .iter()
       .map(|i| {
-        let s_a = vec_mult_u32_u32(s, &cols[i])?;
+        let s_a = vec_mult_u32_u32(s, i)?;
         let e = random_ternary();
         Ok(s_a.wrapping_add(e))
       })
@@ -233,24 +227,17 @@ fn construct_rows(
   plaintext_bits: usize,
 ) -> ResultBoxedError<Vec<Vec<u32>>> {
   let row_width = Database::get_matrix_width(elem_size, plaintext_bits);
-
-  let result = (0..m).map(|i| -> ResultBoxedError<Vec<u32>> {
-    let mut row = Vec::with_capacity(row_width);
-    let data = &elements[i];
-    let bytes = base64::decode(data)?;
-    let bits = bytes_to_bits_le(&bytes);
-    for i in 0..row_width {
-      let end_bound = (i + 1) * plaintext_bits;
-      if end_bound < bits.len() {
-        row.push(bits_to_u32_le(&bits[i * plaintext_bits..end_bound])?);
-      } else {
-        row.push(bits_to_u32_le(&bits[i * plaintext_bits..])?);
-      }
-    }
-    Ok(row)
-  });
-
-  result.collect()
+  elements.iter()
+    .take(m)
+    .map(|data| {
+      let bytes = base64::decode(&data)?;
+      let bits = bytes_to_bits_le(&bytes);
+      bits.chunks(plaintext_bits)
+        .take(row_width)
+        .map(|bitspl| bits_to_u32_le(bitspl).map_err(Into::into))
+        .collect::<ResultBoxedError<Vec<u32>>>()
+    })
+    .collect()
 }
 
 fn generate_seed() -> [u8; 32] {
