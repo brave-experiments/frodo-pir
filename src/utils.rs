@@ -50,16 +50,18 @@ pub mod matrices {
     matrix.iter().map(|y| y[secidx]).collect()
   }
 
-  /// Generates an LWE matrix from a seed
-  pub fn get_lwe_matrix_from_seed(
+  /// Generates an LWE matrix from a public seed
+  /// This corresponds to the generation of `A` in the paper.
+  pub fn generate_lwe_matrix_from_seed(
     seed: [u8; 32],
     lwe_dim: usize,
     width: usize,
   ) -> Vec<Vec<u32>> {
+    use core::iter::repeat_with;
     let mut rng = get_seeded_rng(seed);
-    (0..width).map(|_|
-      (0..lwe_dim).map(|_| rng.next_u32()).collect()
-    ).collect()
+    repeat_with(||
+      repeat_with(|| rng.next_u32()).take(lwe_dim).collect()
+    ).take(width).collect()
   }
 
   /// Multiplies a u32 vector with a u32 column vector

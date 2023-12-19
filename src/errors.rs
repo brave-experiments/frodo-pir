@@ -34,6 +34,7 @@ impl Error for ErrorUnexpectedInputSize {
 // were used already.
 #[derive(Debug)]
 pub struct ErrorQueryParamsReused;
+
 impl Display for ErrorQueryParamsReused {
   fn fmt(&self, f: &mut Formatter) -> FmtResult {
     write!(
@@ -47,6 +48,7 @@ impl Error for ErrorQueryParamsReused {}
 // ErrorOverflownAdd blocks attempts to overflown addition.
 #[derive(Debug)]
 pub struct ErrorOverflownAdd;
+
 impl Display for ErrorOverflownAdd {
   fn fmt(&self, f: &mut Formatter) -> FmtResult {
     write!(f, "Attempted to overflow addition")
