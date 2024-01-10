@@ -7,7 +7,7 @@ PREVIOUS_DIR=..
 # cargo build values
 # these are the FrodoPIR parameters to be used for benchmarking
 MATRIX_HEIGHT_EXP=16
-LWE_DIMENSION=1572
+LWE_DIMENSION=1774
 ELEMENT_SIZE_EXP=13
 PLAINTEXT_SIZE_EXP=10
 NUM_SHARDS=8
